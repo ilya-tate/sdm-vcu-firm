@@ -9,3 +9,4 @@ Push Steps (requires github-cli and git):
 5.  git commit -m "[CHANGES DESCRIPTION]"
 6.  git push -u origin [YOUR GITHUB USERNAME]
 7.  gh pr create
+8.  (Follow terminal prompts)
