@@ -13,7 +13,6 @@
 # Usual trash
 .env
 .env.*
-!.env.example
 *.pem
 *.key
 secrets.toml
@@ -32,9 +31,7 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # IDE trash
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+.vscode/
 .idea/
 *.iml
 *.iws
