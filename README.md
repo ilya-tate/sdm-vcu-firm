@@ -14,7 +14,7 @@
 ### First-Time Startup
 * Do this the first time you set up the repo on your machine
 
-**Authenticate GitHub:**
+**Authenticate GitHub CLI:**
 ```bash
 gh auth login
 # Follow CLI prompts
