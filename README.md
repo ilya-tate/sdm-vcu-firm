@@ -22,7 +22,7 @@ gh auth login
 
 **Clone:**
 ```bash
-git clone https://github.com/<org>/sdm-vcu-firm.git
+git clone https://github.com/ilya-tate/sdm-vcu-firm.git
 cd sdm-vcu-firm
 ```
 
