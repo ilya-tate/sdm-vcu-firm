@@ -1,5 +1,5 @@
 # sdm-vcu-firm
-**SDM-EV**
+**Sun Devil Motorsports EV**
 
 ***Vehicle Control Unit Firmware***
 
