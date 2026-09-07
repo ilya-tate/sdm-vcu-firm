@@ -34,7 +34,7 @@ cd sdm-vcu-firm
 cd sdm-vcu-firm
 git checkout main
 git pull origin main
-git checkout -b <your-github-username>/<feature-name>   # Ex. ilya-tate/big-papa-init
+git checkout -b <github-username>/<feature-name>   # Ex. ilya-tate/big-papa-init
 ```
 
 **Change:**
@@ -57,7 +57,7 @@ gh pr create
 
 **1. Change branches (only if necessary)**
 ```bash
-git checkout -b <your-github-username>/<feature-name>
+git checkout -b <github-username>/<feature-name>
 ```
 
 **2. Make requested edits**
@@ -75,7 +75,7 @@ git push
 ```bash
 git checkout main
 git pull origin main
-git branch -d <your-github-username>/<feature-name>
+git branch -d <github-username>/<feature-name>
 ```
 
 >#### *Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)*
