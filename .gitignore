@@ -4,6 +4,7 @@
 *~
 .\#*
 \#*\#
+.nvim.lua
 
 # Weird trash
 *.log
@@ -64,3 +65,4 @@ target
 # Added by cargo
 
 /target
+
