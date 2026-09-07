@@ -7,9 +7,10 @@
 
 ### Dev Dependencies
 
-- [Rust](https://rustup.rs)
 - [git](https://git-scm.com/downloads)
-- [GitHub CLI](https://cli.github.com)
+- [rustup](https://rustup.rs)
+- [espflash](https://docs.espressif.com/projects/rust/book/getting-started/tooling/espflash.html)
+- [github-cli](https://cli.github.com)
 
 ### First-Time Startup
 * Do this the first time you set up the repo on your machine
