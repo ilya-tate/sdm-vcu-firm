@@ -44,7 +44,7 @@ git checkout -b <github-username>/<feature-name>   # Ex. ilya-tate/big-papa-init
 **Upload:**
 ```bash
 git add <edited-files>                  # Ex. git add bruh.txt src/foo.rs
-# Cool Tip: "git add -A" is a shortcut to add all edited files (run "git status" first tho)
+# Pro Tip: "git add -A" to add all edited files (run "git status" first tho)
 git commit -m "DESCRIPTION"    # Ex. git commit -m "Fixed this bug which caused that problem"
 git push -u origin HEAD
 gh pr create
