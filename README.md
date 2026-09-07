@@ -11,7 +11,7 @@
 - [git](https://git-scm.com/downloads)
 - [GitHub CLI](https://cli.github.com)
 
-### One-Time Startup
+### First-Time Startup
 * Do this the first time you set up the repo on your machine
 
 **Authenticate GitHub:**
