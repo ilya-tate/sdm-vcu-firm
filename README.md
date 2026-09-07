@@ -45,7 +45,7 @@ git checkout -b <github-username>/<feature-name>   # Ex. ilya-tate/big-papa-init
 ```bash
 git add <edited-files>                  # Ex. git add bruh.txt src/foo.rs
 # Cool Tip: "git add -A" is a shortcut to add all edited files (run "git status" first tho)
-git commit -m "<change-description>"    # Ex. git commit -m "Fixed this bug which caused that problem"
+git commit -m "DESCRIPTION"    # Ex. git commit -m "Fixed this bug which caused that problem"
 git push -u origin HEAD
 gh pr create
 # Follow CLI prompts
@@ -67,7 +67,7 @@ git checkout -b <github-username>/<feature-name>
 **3. Push changes**
 ```bash
 git add <reedited-files>
-git commit -m "<change-description>"    # Just address pull request feedback
+git commit -m "DESCRIPTION"    # Just address pull request feedback
 git push
 ```
 
