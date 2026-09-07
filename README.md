@@ -1,12 +1,82 @@
-# Vehicle-Control-Unit
-Sun Devil Motorsports VCU
+# sdm-vcu-firm
+**SDM-EV**
 
-Push Steps (requires github-cli and git):
-1.  git checkout main
-2.  git pull origin main
-3.  git add [DIR]
-4.  git checkout -b [YOUR GITHUB USERNAME]
-5.  git commit -m "[CHANGES DESCRIPTION]"
-6.  git push -u origin [YOUR GITHUB USERNAME]
-7.  gh pr create
-8.  (Follow terminal prompts)
+***Vehicle Control Unit Firmware***
+
+## Gitutorial:
+
+### Dev Dependencies
+
+- [Rust](https://rustup.rs)
+- [git](https://git-scm.com/downloads)
+- [GitHub CLI](https://cli.github.com)
+
+### One-Time Startup
+* Do this the first time you set up the repo on your machine
+
+**Authenticate GitHub:**
+```bash
+gh auth login
+# Follow CLI prompts
+```
+
+**Clone:**
+```bash
+git clone https://github.com/<org>/sdm-vcu-firm.git
+cd sdm-vcu-firm
+```
+
+### Making a Change
+* Do this every time you want to make a change
+
+**Setup:**
+```bash
+cd sdm-vcu-firm
+git checkout main
+git pull origin main
+git checkout -b <your-github-username>/<feature-name>   # Ex. ilya-tate/big-papa-init
+```
+
+**Change:**
+
+*Edit, finalize, and test (please) your changes*
+
+**Upload:**
+```bash
+git add <edited-files>                  # Ex. git add bruh.txt src/foo.rs
+# git add -A is a shortcut to add all edited files (run "git status" first tho)
+git commit -m "<change-description>"    # Ex. git commit -m "Fixed this bug which caused that problem"
+git push -u origin HEAD
+gh pr create
+# Follow CLI prompts
+```
+
+### Requested Changes
+
+* Sometimes you may be asked to make a change to your pull request
+
+**1. Change branches (only if necessary)**
+```bash
+git checkout -b <your-github-username>/<feature-name>
+```
+
+**2. Make requested edits**
+
+*Type away and test*
+
+**3. Push changes**
+```bash
+git add <reedited-files>
+git commit -m "<change-description>"    # Just address pull request feedback
+git push
+```
+
+**4. Update repo after pull request merge**
+```bash
+git checkout main
+git pull origin main
+git branch -d <your-github-username>/<feature-name>
+```
+
+>#### *Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)*
+
