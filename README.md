@@ -51,6 +51,7 @@ _Edit, finalize, and test (please) your changes_
 **Upload:**
 
 ```bash
+cargo build    # Test build
 git add <edited-files>                  # Ex. git add bruh.txt src/foo.rs
 # Pro Tip:
 # "git add -A" to add all edited files (run "git status" first tho)
@@ -77,6 +78,7 @@ _Type away and test_
 **3. Push changes**
 
 ```bash
+cargo build    # Test build
 git add <reedited-files>
 git commit -m "DESCRIPTION"    # Just address pull request feedback
 git push
