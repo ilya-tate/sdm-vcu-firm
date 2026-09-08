@@ -91,3 +91,9 @@ git branch -d <github-username>/<feature-name>
 ```
 
 > #### _Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)_
+
+## Building
+
+```bash
+cargo build --release
+```
