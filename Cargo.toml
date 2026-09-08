@@ -10,7 +10,7 @@ path = "./src/bin/main.rs"
 
 [dependencies]
 critical-section = "1.2.0"
-esp-alloc = "0.11.0"
+esp-alloc = { version = "0.11.0", features = ["esp32p4"] }
 esp-backtrace = { version = "0.20.0", features = [
   "esp32p4",
   "panic-handler",
