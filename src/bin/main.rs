@@ -24,10 +24,29 @@ esp_bootloader_esp_idf::esp_app_desc!();
 )]
 #[main]
 fn main() -> ! {
+    // generator version: 1.3.0
+    // generator parameters: --chip esp32c6 -o log -o esp-backtrace -o stack-smashing-protection -o unstable-hal -o alloc -o esp -o esp32c6-mini-1
+
     esp_println::logger::init_logger_from_env();
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
-    let _peripherals = esp_hal::init(config);
+    let peripherals = esp_hal::init(config);
+
+    // The following pins are used to bootstrap the chip. They are available
+    // for use, but check the datasheet of the module for more information on them.
+    // - GPIO4
+    // - GPIO5
+    // - GPIO8
+    // - GPIO9
+    // - GPIO15
+    // These GPIO pins are in use by some feature of the module and should not be used.
+    let _ = peripherals.GPIO24;
+    let _ = peripherals.GPIO25;
+    let _ = peripherals.GPIO26;
+    let _ = peripherals.GPIO27;
+    let _ = peripherals.GPIO28;
+    let _ = peripherals.GPIO29;
+    let _ = peripherals.GPIO30;
 
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 65536);
 
