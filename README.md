@@ -94,8 +94,15 @@ git branch -d <github-username>/<feature-name>
 
 > #### _Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)_
 
-## Building
+## Run
+
+** Building **
 
 ```bash
 cargo build --release
+```
+
+** Flashing **
+```bash
+cargo run --release
 ```
