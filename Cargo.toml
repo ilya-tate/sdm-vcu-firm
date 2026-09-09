@@ -21,6 +21,7 @@ esp-hal = { version = "1.2.0", features = ["esp32p4", "log-04", "unstable"] }
 esp-println = { version = "0.18.0", features = ["esp32p4", "log-04"] }
 log = "0.4.34"
 
+[profile.dev]
 opt-level = "s"
 
 [profile.release]
