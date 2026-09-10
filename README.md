@@ -96,13 +96,13 @@ git branch -d <github-username>/<feature-name>
 
 ## Run
 
-** Building **
+**Building**
 
 ```bash
 cargo build --release
 ```
 
-** Flashing **
+**Flashing**
 ```bash
 cargo run --release
 ```
