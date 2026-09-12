@@ -1,31 +1,27 @@
 [package]
-edition = "2024"
 name = "vcu-firm"
-rust-version = "1.98.1"
 version = "0.1.0"
+authors = ["ilya-tate <ilyatate@gmail.com>"]
+edition = "2021"
+resolver = "2"
+rust-version = "1.82"
 
 [[bin]]
 name = "vcu-firm"
-path = "./src/bin/main.rs"
-
-[dependencies]
-critical-section = "1.2.0"
-esp-alloc = { version = "0.11.0", features = ["esp32p4"] }
-esp-backtrace = { version = "0.20.0", features = [
-  "esp32p4",
-  "panic-handler",
-  "println",
-] }
-esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32p4", "log-04"] }
-esp-hal = { version = "1.2.0", features = ["esp32p4", "log-04", "unstable"] }
-esp-println = { version = "0.18.0", features = ["esp32p4", "log-04"] }
-log = "0.4.34"
-
-[profile.dev]
-opt-level = "s"
+harness = false # do not use the built-in cargo test harness -> resolve rust-analyzer errors
 
 [profile.release]
-codegen-units = 1
-debug = 2
-lto = "fat"
-opt-level = 3
+opt-level = "s"
+
+[profile.dev]
+debug = true    # Symbols are nice, and they don't increase the size on Flash
+opt-level = "z"
+
+[dependencies]
+log = "0.4"
+esp-idf-svc = { version = "0.52.1", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
+# Remove `generic-queue-8` if you plan to use `embassy-time` WITH `embassy-executor`
+embassy-time = { version = "0.5", features = ["generic-queue-8"] }
+
+[build-dependencies]
+embuild = "0.33"
