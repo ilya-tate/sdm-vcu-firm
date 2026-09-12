@@ -106,3 +106,11 @@ cargo build --release
 ```bash
 cargo run --release
 ```
+
+
+## Hardware Reference
+
+- Microcontroller Chip: [ESP32-P4](https://documentation.espressif.com/esp32-p4_datasheet_en.html)
+- CAN Controller: [MCP2518FDT-E/SL](https://datasheet.datasheetarchive.com/originals/distributors/Datasheets_SAMA/744760637e861ab0ee43f380fa65a694.pdf)
+- CAN Transciever: [TCAN3413DR](https://www.ti.com/lit/ds/symlink/tcan3413.pdf?ts=1704463166829&ref_url=https%253A%252F%252Fwww.ti.com%252Fproduct%252Fde-de%252FTCAN3413)
+
