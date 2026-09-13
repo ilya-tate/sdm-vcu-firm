@@ -1492,6 +1492,7 @@ dependencies = [
  "esp-hal",
  "esp-println",
  "log",
+ "nb 1.1.0",
 ]
 
 [[package]]
