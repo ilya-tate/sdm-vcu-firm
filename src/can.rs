@@ -1,7 +1,7 @@
 use esp_hal::gpio::{Level, InputPin, Output, OutputPin, OutputConfig};
 use esp_hal::twai::{BaudRate, TwaiRx, TwaiTx, TwaiConfiguration, TwaiMode};
 
-pub fn tranceiver_enable(standby_pin: impl OutputPin) -> Output<'static> {
+pub fn tranceiver_enable(standby_pin: impl OutputPin + 'static) -> Output<'static> {
     Output::new(
         standby_pin,
         Level::Low, // Set polarity low
