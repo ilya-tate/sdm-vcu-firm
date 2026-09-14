@@ -1,10 +1,9 @@
 [package]
 name = "vcu-firm"
 version = "0.1.0"
-authors = ["ilya-tate <ilyatate@gmail.com>"]
 edition = "2021"
-resolver = "2"
 rust-version = "1.82"
+resolver = "2"
 
 [[bin]]
 name = "vcu-firm"
