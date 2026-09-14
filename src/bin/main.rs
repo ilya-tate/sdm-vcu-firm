@@ -12,8 +12,8 @@ use esp_hal::clock::CpuClock;
 use esp_hal::main;
 use esp_hal::time::{Duration, Instant};
 //use log::{info, warn};
-use log::info;
 use esp_hal::twai::BaudRate;
+use log::info;
 
 extern crate alloc;
 
@@ -41,13 +41,13 @@ fn main() -> ! {
         peripherals.TWAI0,  // TWAI0
         peripherals.GPIO14, // RX
         peripherals.GPIO13, // TX
-        BaudRate::B500K     // BUS Speed
+        BaudRate::B500K,    // BUS Speed
     );
 
     loop {
         let delay_start = Instant::now();
         info!("main.rs initializing...");
-    
+
         // Can input checker
         match can3_rx.receive() {
             Ok(frame) => info!("CAN Frame: {frame}"),
