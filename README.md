@@ -39,8 +39,8 @@ cd sdm-vcu-firm
 
 ```bash
 cd sdm-vcu-firm
-git checkout main
-git pull origin main
+git checkout esp-idf-dev
+git pull origin esp-idf-dev
 git checkout -b <github-username>/<feature-name>   # Ex. ilya-tate/big-papa-init
 ```
 
@@ -87,8 +87,8 @@ git push
 **4. Update repo after pull request merge**
 
 ```bash
-git checkout main
-git pull origin main
+git checkout esp-idf-dev
+git pull origin esp-idf-dev
 git branch -d <github-username>/<feature-name>
 ```
 
