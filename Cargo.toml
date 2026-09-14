@@ -5,9 +5,14 @@ version 	    = "0.1.0"
 rust-version 	= "1.82"
 resolver 	    = "2"
 
+[lib]
+name = "vcu-firm"
+path = "src/lib.rs"
+
 [[bin]]
-name 		    = "vcu-firm"
-harness 	    = false
+name = "main"
+path = "src/bin/main.rs"
+harness = false
 
 [profile.release]
 opt-level 	    = "s"
