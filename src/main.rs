@@ -10,7 +10,7 @@ mod app {
 
     use imxrt_log as logging;
 
-    use board::t40 as t41;
+    use board::t41;
 
     use rtic_monotonics::systick::{Systick, *};
 
