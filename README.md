@@ -105,6 +105,8 @@ cargo run --release
 ```
 
 
-## Hardware Reference
+## Documentation
 
 - Development Board: [Teensy 4.1](https://www.pjrc.com/store/teensy41.html)
+- CAN Library: [FlexCAN_T4](https://github.com/tonton81/FlexCAN_T4)
+
