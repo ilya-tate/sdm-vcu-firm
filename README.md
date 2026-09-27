@@ -14,6 +14,14 @@ _**Vehicle Control Unit Firmware**_
 
 - Do this the first time you set up the repo on your machine
 
+**Embedded Rust Setup:**
+
+```bash
+rustup target add thumbv7em-none-eabihf
+rustup component add llvm-tools-preview
+cargo install cargo-binutils cargo-generate
+```
+
 **Authenticate GitHub CLI:**
 
 ```bash
