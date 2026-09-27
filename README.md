@@ -107,4 +107,4 @@ cargo run --release
 
 ## Hardware Reference
 
-- Microcontroller Chip: [Teensy 4.1](https://www.pjrc.com/store/teensy41.html)
+- Development Board: [Teensy 4.1](https://www.pjrc.com/store/teensy41.html)
