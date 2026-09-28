@@ -1,3 +1,6 @@
+[alias]
+hex = "objcopy --locked --release --bin sdm-vcu-firm -- -O ihex vcu-firm.hex"
+
 [build]
 target = "thumbv7em-none-eabihf"
 
