@@ -4,14 +4,13 @@
 
 ### Dev Dependencies
 
-- [git](https://git-scm.com/downloads)
 - [rustup](https://rustup.rs)
+- [teensy_loader_cli](https://github.com/PaulStoffregen/teensy_loader_cli)
+- [git](https://git-scm.com/downloads)
 - [github-cli](https://cli.github.com)
-  - Optional if using SSH for auth
+  > Optional if using SSH for auth
 
 ### First-Time Startup
-
-- Do this the first time you set up the repo on your machine
 
 **Embedded Rust Setup:**
 
@@ -113,17 +112,17 @@ cargo run --release
 
 ## Documentation
 
-- Rust: [Embedded Rust Book](https://docs.rust-embedded.org/book/)
-- Teensy: [Teensy board-support API](https://docs.rs/teensy4-bsp/latest/teensy4_bsp/)
-- HAL: [i.MX RT HAL API](https://docs.rs/imxrt-hal/latest/imxrt_hal/)
-- RTIC "OS": [RTIC v2 Book](https://rtic.rs/2/book/en/)
-- HEX File Gen: [cargo-binutils](https://github.com/rust-embedded/cargo-binutils/)
-- Project Template: [teensy4-rs-template](https://github.com/mciantyre/teensy4-rs-template/)
+- Rust: [Embedded Rust Book](https://docs.rust-embedded.org/book)
+- Teensy: [Teensy board-support API](https://docs.rs/teensy4-bsp/latest/teensy4_bsp)
+- HAL: [i.MX RT HAL API](https://docs.rs/imxrt-hal/latest/imxrt_hal)
+- RTIC "OS": [RTIC v2 Book](https://rtic.rs/2/book/en)
+- HEX File Gen: [cargo-binutils](https://github.com/rust-embedded/cargo-binutils)
+- Project Template: [teensy4-rs-template](https://github.com/mciantyre/teensy4-rs-template)
 
 ## Teensy 4.1 References
 
 - Development Board: [Teensy 4.1](https://www.pjrc.com/store/teensy41.html)
 - Microchip: [NXP i.MX RT1060](https://nxp.com/products/i.MX-RT1060)
 - Rust Toolchain: [teensy4-rs](https://github.com/mciantyre/teensy4-rs)
-- CAN Lib: [FlexCAN_T4](https://github.com/tonton81/FlexCAN_T4/)
-- Flashing: [teensy_loader_cli](https://github.com/PaulStoffregen/teensy_loader_cli)
+- CAN Lib: [FlexCAN_T4](https://github.com/tonton81/FlexCAN_T4)
+- Flashing: [teensy_loader_cli](https://www.pjrc.com/teensy/loader_cli.html)

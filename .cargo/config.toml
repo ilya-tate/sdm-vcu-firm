@@ -5,6 +5,7 @@ hex = "objcopy --locked --release --bin sdm-vcu-firm -- -O ihex vcu-firm.hex"
 target = "thumbv7em-none-eabihf"
 
 [target.thumbv7em-none-eabihf]
+runner = ["bash", "flash.sh"]
 rustflags = [
     "-C", "link-arg=-Tt4link.x",
 ]
