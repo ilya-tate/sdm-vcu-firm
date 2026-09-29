@@ -12,8 +12,6 @@
 
 ### First-Time Startup
 
-- Do this the first time you set up the repo on your machine
-
 **Embedded Rust Setup:**
 
 ```bash
