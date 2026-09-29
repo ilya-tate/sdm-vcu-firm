@@ -1,6 +1,4 @@
-# Sun Devil Motorsports EV
-
-_**Vehicle Control Unit Firmware**_
+# SDM EV: _**Vehicle Control Unit Firmware**_
 
 ## Gitutorial:
 
