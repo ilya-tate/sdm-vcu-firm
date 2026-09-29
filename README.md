@@ -7,6 +7,7 @@
 - [git](https://git-scm.com/downloads)
 - [rustup](https://rustup.rs)
 - [github-cli](https://cli.github.com)
+  - Optional if using SSH for auth
 
 ### First-Time Startup
 
