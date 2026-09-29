@@ -127,4 +127,3 @@ cargo run --release
 - Rust Toolchain: [teensy4-rs](https://github.com/mciantyre/teensy4-rs)
 - CAN Lib: [FlexCAN_T4](https://github.com/tonton81/FlexCAN_T4/)
 - Flashing: [teensy_loader_cli](https://github.com/PaulStoffregen/teensy_loader_cli)
-
