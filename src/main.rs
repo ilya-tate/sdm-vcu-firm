@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+mod can;
+
 use teensy4_panic as _;
 
 #[rtic::app(device = teensy4_bsp, peripherals = true, dispatchers = [KPP])]
