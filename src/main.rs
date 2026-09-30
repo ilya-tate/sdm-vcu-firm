@@ -10,6 +10,8 @@ mod app {
     use bsp::board;
     use teensy4_bsp as bsp;
 
+    use crate::can;
+
     use imxrt_log as logging;
 
     use board::t41;
@@ -23,10 +25,9 @@ mod app {
     /// These resources are local to individual tasks.
     #[local]
     struct Local {
-        /// The LED on pin 13.
-        led: board::Led,
-        /// A poller to control USB logging.
+        led: board::Led, // Pin 13
         poller: logging::Poller,
+        can: can::CanBus, // Pins 0, 1
     }
 
     #[init]
@@ -35,11 +36,15 @@ mod app {
             mut gpio2,
             pins,
             usb,
+            mut ccm,
             ..
         } = t41(cx.device);
 
         let led = board::led(&mut gpio2, pins.p13);
         let poller = logging::log::usbd(usb, logging::Interrupts::Enabled).unwrap();
+
+        let can = can::CanBus::new(&mut ccm, pins.p0, pins.p1);
+        log::info!("CAN2 @ {} kbps", can::BITRATE / 1000);
 
         Systick::start(
             cx.core.SYST,
@@ -48,7 +53,7 @@ mod app {
         );
 
         blink::spawn().unwrap();
-        (Shared {}, Local { led, poller })
+        (Shared {}, Local { led, poller, can })
     }
 
     #[task(local = [led])]

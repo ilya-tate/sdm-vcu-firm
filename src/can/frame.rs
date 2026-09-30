@@ -14,11 +14,11 @@ impl Frame {
     pub fn new(id: u16, payload: &[u8]) -> Result<Self, FrameErr> {
         if id > MAX_ID {
             // Id out of range
-            return Err(FrameErr::InvalidId(id));
+            return Err(FrameErr::InvalidIdBound(id));
         }
         if payload.len() > MAX_LEN {
             // Payload too big
-            return Err(FrameErr::InvalidPayload(payload.len()));
+            return Err(FrameErr::InvalidPayloadBound(payload.len()));
         }
 
         let mut data = [0; MAX_LEN];
