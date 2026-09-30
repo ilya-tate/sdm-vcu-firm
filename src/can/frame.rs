@@ -1,11 +1,5 @@
-pub const MAX_ID: u16 = 0x7ff;  // 0000 0111 1111 1111
-pub const MAX_LEN: usize = 8;   // u4
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum FrameErr {
-    InvalidId(u16),
-    InvalidPayload(usize),
-}
+pub const MAX_ID: u16 = 0x7ff; // 0000 0111 1111 1111
+pub const MAX_LEN: usize = 8; // u4
 
 // can2.0a
 // 0-8 byte payload
@@ -18,7 +12,6 @@ pub struct Frame {
 
 impl Frame {
     pub fn new(id: u16, payload: &[u8]) -> Result<Self, FrameErr> {
-
         if id > MAX_ID {
             // Id out of range
             return Err(FrameErr::InvalidId(id));
@@ -31,7 +24,11 @@ impl Frame {
         let mut data = [0; MAX_LEN];
         data[..payload.len()].copy_from_slice(payload);
 
-        Ok(Self { id, payload: data, len: payload.len() as u8 })
+        Ok(Self {
+            id,
+            payload: data,
+            len: payload.len() as u8,
+        })
     }
 
     pub fn id(&self) -> u16 {
@@ -48,3 +45,8 @@ impl Frame {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FrameErr {
+    InvalidIdBound(u16),
+    InvalidPayloadBound(usize),
+}
