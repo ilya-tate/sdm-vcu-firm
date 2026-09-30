@@ -1,3 +1,9 @@
+// TODO:
+// - Test if init hangs in can.rs or main.rs
+// - Create checks for bus
+// - Clear mailboxes after init
+// - Add message handling
+
 pub mod frame;
 //pub mod message_handler;
 
