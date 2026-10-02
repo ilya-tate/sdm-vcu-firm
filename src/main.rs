@@ -27,7 +27,7 @@ mod app {
     struct Local {
         led: board::Led, // Pin 13
         poller: logging::Poller,
-        can: can::CanBus, // Pins 0, 1
+        can: Option<can::CanBus>, // Pins 0, 1
     }
 
     #[init]
@@ -43,8 +43,17 @@ mod app {
         let led = board::led(&mut gpio2, pins.p13);
         let poller = logging::log::usbd(usb, logging::Interrupts::Enabled).unwrap();
 
-        let can = can::CanBus::new(&mut ccm, pins.p0, pins.p1);
-        log::info!("CAN2 @ {} kbps", can::BITRATE / 1000);
+        let can = match can::CanBus::new(&mut ccm, pins.p0, pins.p1) {
+            Ok(bus) => {
+                log::info!("CAN2 @ {} kbps", can::BITRATE / 1000);
+                Some(bus)
+            }
+
+            Err(e) => {
+                log::error!("CAN2 init failure: {:?}", e);
+                None
+            }
+        };
 
         Systick::start(
             cx.core.SYST,
