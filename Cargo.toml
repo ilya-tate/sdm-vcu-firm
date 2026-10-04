@@ -2,25 +2,34 @@
 name = "sdm-vcu-firm"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.98.1"
+license = "MIT"
 
 [dependencies]
-rtic = { version = "2", features = ["thumbv7-backend"] }
-rtic-monotonics = { version = "1", default-features = false, features = ["cortex-m-systick"] }
+embassy-stm32 = { git = "https://github.com/embassy-rs/embassy.git", features = [ "defmt", "time-driver-any", "stm32g474re", "memory-x", "unstable-pac", "exti", "dual-bank"]  }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy.git", features = ["defmt"] }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy.git", features = ["platform-cortex-m", "executor-thread", "defmt"] }
+embassy-time = { git = "https://github.com/embassy-rs/embassy.git", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-usb = { git = "https://github.com/embassy-rs/embassy.git", features = ["defmt"] }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy.git" }
+usbd-hid = "0.10.0"
 
-# Remove these if you don't want logging.
-imxrt-log = { version = "0.2", default-features = false, features = ["log", "usbd"] }
-log = { version = "0.4", features = ["max_level_debug", "release_max_level_info"] }
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
 
-teensy4-panic = { version = "0.3", features = ["log"] }
+cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.0"
+embedded-hal = "0.2.6"
+embedded-can = { version = "0.4" }
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+heapless = { version = "0.9", default-features = false }
+static_cell = "2.0.0"
+critical-section = "1.1"
 
-[dependencies.teensy4-bsp]
-version = "0.6"
-features = [
-    # Use the BSP's runtime.
-    "rt",
+[profile.release]
+debug = 2
+
+[package.metadata.embassy]
+build = [
+  { target = "thumbv7em-none-eabi", artifact-dir = "out/examples/stm32g4" }
 ]
-
-# Don't optimize build dependencies, like proc macros.
-# Helps with build times.
-[profile.release.build-override]
-opt-level = 0

@@ -1,11 +1,9 @@
-[alias]
-hex = "objcopy --locked --release --bin sdm-vcu-firm -- -O ihex vcu-firm.hex"
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+runner = "probe-rs run --chip STM32G474RE"
 
 [build]
-target = "thumbv7em-none-eabihf"
+target = "thumbv7em-none-eabi"
 
-[target.thumbv7em-none-eabihf]
-runner = ["bash", "flash.sh"]
-rustflags = [
-    "-C", "link-arg=-Tt4link.x",
-]
+[env]
+DEFMT_LOG = "trace"
+
