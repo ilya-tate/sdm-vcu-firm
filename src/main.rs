@@ -1,75 +1,20 @@
 #![no_std]
 #![no_main]
 
-use teensy4_panic as _;
+use defmt::info;
+use embassy_executor::Spawner;
+use embassy_stm32::Config;
+use embassy_time::Timer;
+use {defmt_rtt as _, panic_probe as _};
 
-#[rtic::app(device = teensy4_bsp, peripherals = true, dispatchers = [KPP])]
-mod app {
-    use bsp::board;
-    use teensy4_bsp as bsp;
+// mod libs
 
-    use imxrt_log as logging;
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    let mut config = Config::default();
 
-    use board::t41;
+    let pin = embassy_stm32::init(config);
 
-    use rtic_monotonics::systick::{Systick, *};
-
-    /// There are no resources shared across tasks.
-    #[shared]
-    struct Shared {}
-
-    /// These resources are local to individual tasks.
-    #[local]
-    struct Local {
-        /// The LED on pin 13.
-        led: board::Led,
-        /// A poller to control USB logging.
-        poller: logging::Poller,
-    }
-
-    #[init]
-    fn init(cx: init::Context) -> (Shared, Local) {
-        let board::Resources {
-            mut gpio2,
-            pins,
-            usb,
-            ..
-        } = t41(cx.device);
-
-        let led = board::led(&mut gpio2, pins.p13);
-        let poller = logging::log::usbd(usb, logging::Interrupts::Enabled).unwrap();
-
-        Systick::start(
-            cx.core.SYST,
-            board::ARM_FREQUENCY,
-            rtic_monotonics::create_systick_token!(),
-        );
-
-        blink::spawn().unwrap();
-        (Shared {}, Local { led, poller })
-    }
-
-    #[task(local = [led])]
-    async fn blink(cx: blink::Context) {
-        let mut count = 0u32;
-        loop {
-            cx.local.led.toggle();
-            Systick::delay(500.millis()).await;
-
-            log::info!("Hello from your Teensy 4! The count is {count}");
-            if count % 7 == 0 {
-                log::warn!("Here's a warning at count {count}");
-            }
-            if count % 23 == 0 {
-                log::error!("Here's an error at count {count}");
-            }
-
-            count = count.wrapping_add(1);
-        }
-    }
-
-    #[task(binds = USB_OTG1, local = [poller])]
-    fn log_over_usb(cx: log_over_usb::Context) {
-        cx.local.poller.poll();
-    }
+    Timer::after_secs(1).await;
+    info!("SDM VCU init done");
 }
