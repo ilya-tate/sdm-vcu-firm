@@ -1,24 +1,21 @@
 # SDM EV: _**Vehicle Control Unit Firmware**_
 
+**Status:**
+
+- Pending setup implementation of dev board tools and template code
+- A custom PCB using the STM32-G4 is currently in development
+
 ## Gitutorial:
 
 ### Dev Dependencies
 
 - [rustup](https://rustup.rs)
-- [teensy_loader_cli](https://github.com/PaulStoffregen/teensy_loader_cli)
+- [probe-rs](https://probe.rs/docs/getting-started/installation/)
 - [git](https://git-scm.com/downloads)
 - [github-cli](https://cli.github.com)
   > Optional if using SSH for auth
 
 ### First-Time Startup
-
-**Embedded Rust Setup:**
-
-```bash
-rustup target add thumbv7em-none-eabihf
-rustup component add llvm-tools-preview
-cargo install cargo-binutils cargo-generate
-```
 
 **Authenticate GitHub CLI:**
 
@@ -97,35 +94,19 @@ git branch -d <github-username>/<feature-name>
 
 > #### _Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)_
 
-## Run
-
-**Building**
-
-```bash
-cargo build --release
-```
-
-**Flashing**
-```bash
-cargo run --release
-```
-
 ## Documentation
 
 - Rust: [Embedded Rust Book](https://docs.rust-embedded.org/book)
-- Teensy: [Teensy board-support API](https://docs.rs/teensy4-bsp/latest/teensy4_bsp)
-- HAL: [i.MX RT HAL API](https://docs.rs/imxrt-hal/latest/imxrt_hal)
-- RTIC "OS": [RTIC v2 Book](https://rtic.rs/2/book/en)
-- HEX File Gen: [cargo-binutils](https://github.com/rust-embedded/cargo-binutils)
-- Project Template: [teensy4-rs-template](https://github.com/mciantyre/teensy4-rs-template)
+- Hardware Access Layer: [stm32g4xx-hal](https://github.com/stm32-rs/stm32g4xx-hal)
+- Flashing: [cargo-flash](https://probe.rs/docs/tools/cargo-flash/)
+- Probe (Debugging): [probe-rs](https://probe.rs/docs/getting-started/probe-setup/)
 
-## Teensy 4.1 References
+## Hardware References
 
-- Development Board: [Teensy 4.1](https://www.pjrc.com/store/teensy41.html)
-- Microchip: [NXP i.MX RT1060](https://nxp.com/products/i.MX-RT1060)
-- Rust Toolchain: [teensy4-rs](https://github.com/mciantyre/teensy4-rs)
-- CAN Lib: [FlexCAN_T4](https://github.com/tonton81/FlexCAN_T4)
-- Flashing: [teensy_loader_cli](https://www.pjrc.com/teensy/loader_cli.html)
+- Dev Board: [NUCLEO-G474RE](https://www.st.com/en/evaluation-tools/nucleo-g474re.html)
+- Microcontroller Family: [STM32G4](https://www.st.com/en/microcontrollers-microprocessors/stm32g4-series.html)
+- Dev Board Microcontroller: [STM32G474RE](https://www.st.com/en/microcontrollers-microprocessors/stm32g474re.html)
 
 ## Progress Tracking
+
 [Taiga.io Kanban Board](https://tree.taiga.io/project/ilya-tate-sdm-vcu-firmware/kanban)
