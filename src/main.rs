@@ -16,6 +16,7 @@ mod app {
 
     use board::t41;
 
+    use rtic_monotonics::Monotonic;
     use rtic_monotonics::systick::{Systick, *};
 
     /// There are no resources shared across tasks.
@@ -27,7 +28,7 @@ mod app {
     struct Local {
         led: board::Led, // Pin 13
         poller: logging::Poller,
-        can: Option<can::CanBus>, // Pins 0, 1
+        can: Result<can::CanBus, can::init::InitErr>, // Pins 0, 1
     }
 
     #[init]
@@ -43,17 +44,7 @@ mod app {
         let led = board::led(&mut gpio2, pins.p13);
         let poller = logging::log::usbd(usb, logging::Interrupts::Enabled).unwrap();
 
-        let can = match can::CanBus::new(&mut ccm, pins.p0, pins.p1) {
-            Ok(bus) => {
-                log::info!("CAN2 @ {} kbps", can::BITRATE / 1000);
-                Some(bus)
-            }
-
-            Err(e) => {
-                log::error!("CAN2 init failure: {:?}", e);
-                None
-            }
-        };
+        let can = can::CanBus::new(&mut ccm, pins.p0, pins.p1);
 
         Systick::start(
             cx.core.SYST,
@@ -62,25 +53,78 @@ mod app {
         );
 
         blink::spawn().unwrap();
+        can_test::spawn().unwrap();
         (Shared {}, Local { led, poller, can })
     }
 
     #[task(local = [led])]
     async fn blink(cx: blink::Context) {
-        let mut count = 0u32;
         loop {
             cx.local.led.toggle();
             Systick::delay(500.millis()).await;
+        }
+    }
 
-            log::info!("Hello from your Teensy 4! The count is {count}");
-            if count % 7 == 0 {
-                log::warn!("Here's a warning at count {count}");
+    // Bench test: one standard data frame per second, RX polling every 1 ms.
+    #[task(local = [can])]
+    async fn can_test(cx: can_test::Context) {
+        let frame = can::frame::Frame::new(0x123, &[1, 2, 3, 4]).unwrap();
+        let mut next_send = Systick::now() + 2.secs();
+        let mut pending = false;
+        loop {
+            match cx.local.can.as_mut() {
+                Ok(bus) => {
+                    if bus.take_tx_complete() {
+                        pending = false;
+                        log::info!("CAN TX complete id=123 data=01 02 03 04");
+                    }
+                    // Bound each drain so a busy bus cannot starve other tasks.
+                    for _ in 0..14 {
+                        match bus.try_receive() {
+                            Ok(Some(received)) => {
+                                log::info!(
+                                    "CAN RX id={:03X} data={:02X?} overrun={}",
+                                    received.frame.id(),
+                                    received.frame.payload(),
+                                    received.overrun
+                                );
+                            }
+                            Ok(None) => break,
+                            Err(e) => log::warn!("CAN RX error: {:?}", e),
+                        }
+                    }
+                    if Systick::now() >= next_send {
+                        if pending {
+                            log::warn!("CAN TX still pending: check peer, bitrate and wiring");
+                        } else {
+                            match bus.try_transmit(&frame) {
+                                Ok(()) => {
+                                    pending = true;
+                                    log::info!(
+                                        "CAN TX queued id=123 @ {} kbps",
+                                        can::BITRATE / 1000
+                                    );
+                                }
+                                Err(e) => log::warn!("CAN TX error: {:?}", e),
+                            }
+                        }
+                        let (esr, ecr) = bus.error_status();
+                        log::info!(
+                            "CAN ESR1={:08X} TX errors={} RX errors={}",
+                            esr,
+                            ecr & 0xff,
+                            (ecr >> 8) & 0xff
+                        );
+                        next_send = Systick::now() + 1.secs();
+                    }
+                }
+                Err(e) => {
+                    // Repeat so an early USB startup message cannot hide failure.
+                    log::error!("CAN2 init failure: {:?}", e);
+                    Systick::delay(1.secs()).await;
+                }
             }
-            if count % 23 == 0 {
-                log::error!("Here's an error at count {count}");
-            }
-
-            count = count.wrapping_add(1);
+            Systick::delay(1.millis()).await;
         }
     }
 

@@ -1,17 +1,11 @@
-use core::ops::Range;
-
 use teensy4_bsp::ral::{can, ccm, modify_reg, read_reg, write_reg};
 
-use super::BITRATE;
+use super::{BITRATE, message_handler};
 
 // Can init params
 const CAN_CLOCK: u32 = 24_000_000; // Can clock: 24Mhz
 const BIT_QUANT: u32 = 16; // Time quant per transfer bit
 const PRESCALE_DIVIDE: u32 = CAN_CLOCK / (BITRATE * BIT_QUANT) - 1;
-const MAILBOXES: Range<usize> = 0..16; // Possible mailbox lenghts
-const MAILBOX_DATA: usize = 4; // controller, id, bytes 0-3, bytes 4-7
-const LOC_MAILBOX_HEAD: usize = 0x80 / 4;
-const LOC_RX_START: usize = 0x880 / 4;
 // Time to wait before error thrown,
 // addressing hanging inits
 const WAIT_TIMEOUT: u32 = 1_000_000;
@@ -27,7 +21,9 @@ macro_rules! wait_mcr {
         $field:ident == $val:literal,
         $stage:ident
     ) => {
-        try_until_done(InitErr::$stage, || read_reg!(can, $controller, MCR, $field == $val))?
+        try_until_done(InitErr::$stage, || {
+            read_reg!(can, $controller, MCR, $field == $val)
+        })?
     };
 }
 
@@ -46,7 +42,7 @@ pub(super) fn can_init(controller: &can::CAN2) -> Result<(), InitErr> {
         SRXDIS: 1,  // Reject frames from self
         IRMQ: 1,    // Rx for each mailbox
         AEN: 1,     // Allow abort output reqs
-        MAXMB: MAILBOXES.end as u32 - 1
+        MAXMB: 15
     );
 
     // Control timings
@@ -61,24 +57,9 @@ pub(super) fn can_init(controller: &can::CAN2) -> Result<(), InitErr> {
         RJW: 1      // resync jump
     );
 
-    // Mailbox ram at random loc on reset
-    let mem_block: &can::RegisterBlock = controller;
-    let mem_ptr = mem_block as *const can::RegisterBlock as *mut u32;
-
-    for mailbox in MAILBOXES {
-        // Clear all to inactive, no id, no data
-        for i in 0..MAILBOX_DATA {
-            unsafe {
-                // Ensures mailbox data, is in ram, and frozen
-                mem_ptr
-                    .add(LOC_MAILBOX_HEAD + mailbox * MAILBOX_DATA + i)
-                    .write_volatile(0)
-            };
-        }
-
-        // Clear input mask (per mailbox)
-        unsafe { mem_ptr.add(LOC_RX_START + mailbox).write_volatile(0) };
-    }
+    // Compare IDE/RTR as well as identifiers; never auto-answer remote frames.
+    modify_reg!(can, controller, CTRL2, EACEN: 1, RRS: 1);
+    message_handler::configure(controller);
 
     // Freezed until sync
     modify_reg!(can, controller, MCR, FRZ: 0, HALT: 0);
@@ -101,24 +82,21 @@ pub(super) fn clock_init(clocks: &ccm::CCM) {
 pub enum InitErr {
     // Errors thrown when param left unlceared
     // Addresses hanging init
-    LowPowerErr,            // LPMACK
-    SoftResetUncleared,     // SOFTRST
-    FreezeUnset,            // FRZACK unset
-    FreezeStopUncleared,    // FRZACK
-    NotReadyUncleared,      // NOTRDY
+    LowPowerErr,         // LPMACK
+    SoftResetUncleared,  // SOFTRST
+    FreezeUnset,         // FRZACK unset
+    FreezeStopUncleared, // FRZACK
+    NotReadyUncleared,   // NOTRDY
 }
 
 // Tries until wait time is over,
 // throws on timeout
-fn try_until_done(
-    E: InitErr, mut done: impl FnMut() -> bool
-) -> Result<(), InitErr> {
+fn try_until_done(e: InitErr, mut done: impl FnMut() -> bool) -> Result<(), InitErr> {
     for _i in 0..WAIT_TIMEOUT {
         if done() {
             return Ok(());
         }
     }
 
-    Err(E)
+    Err(e)
 }
-

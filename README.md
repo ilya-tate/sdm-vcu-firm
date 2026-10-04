@@ -112,6 +112,36 @@ cargo run --release
 
 ## Documentation
 
+### CAN bench test
+
+`cargo run --release` flashes a test that sends standard CAN ID `0x123`
+with bytes `01 02 03 04` once per second at 500 kbps. This test traffic is
+for a bench bus; remove the `can_test` task spawn before vehicle integration.
+
+Use a 3.3 V logic-compatible CAN transceiver (pin 1 to TXD, pin 0 to RXD),
+with CANH/CANL connected to a second active CAN node at 500 kbps and 120 ohm
+termination at each end. The peer must acknowledge frames, not run in silent mode.
+
+Watch the Teensy's USB serial logs (typically `/dev/ttyACM0` on Linux):
+
+- `CAN TX queued`: a frame was submitted, not yet confirmed sent.
+- `CAN TX complete`: the controller completed transmission.
+- `CAN RX id=... data=...`: a standard data frame was received from the peer.
+- `CAN TX still pending`: no completed transmission; check the peer and wiring.
+- `CAN2 init failure`: initialization failed; the error repeats every second.
+
+Send standard ID `0x456`, bytes `AA BB CC DD` from the peer and check that the
+same ID and bytes appear in the USB log. Check that the peer sees `0x123` with
+`01 02 03 04`. Error counters should remain zero on a healthy bench bus.
+
+The driver supports standard 11-bit Classical CAN data frames with 0–8 bytes.
+It polls 14 RX mailboxes and uses one TX mailbox, with no software queue.
+RX overrun is reported, and mailbox scan order does not guarantee arrival order.
+This is a low-traffic bring-up test, not a lossless high-load receiver.
+
+Mailbox access follows the [NXP FlexCAN driver](https://github.com/nxp-mcuxpresso/mcux-sdk/blob/main/drivers/flexcan/fsl_flexcan.c),
+including RX unlocking and the reserved-mailbox transmit workaround.
+
 - Rust: [Embedded Rust Book](https://docs.rust-embedded.org/book)
 - Teensy: [Teensy board-support API](https://docs.rs/teensy4-bsp/latest/teensy4_bsp)
 - HAL: [i.MX RT HAL API](https://docs.rs/imxrt-hal/latest/imxrt_hal)
