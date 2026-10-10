@@ -51,11 +51,12 @@ _Edit, finalize, and test (please) your changes_
 **Upload:**
 
 ```bash
-cargo build    # Test build
-git add <edited-files>                  # Ex. git add bruh.txt src/foo.rs
+cargo build  # Test build
+cargo fmt    # Format build
+git add <edited-files> # Ex. git add bruh.txt src/foo.rs
 # Pro Tip:
 # "git add -A" to add all edited files (run "git status" first tho)
-git commit -m "DESCRIPTION"    # Ex. git commit -m "Fixed this bug which caused that problem"
+git commit -m "DESCRIPTION" # Ex. git commit -m "Fixed this bug which caused that problem"
 git push -u origin HEAD
 gh pr create
 # Follow CLI prompts
