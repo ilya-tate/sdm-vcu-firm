@@ -32,8 +32,8 @@ pub fn config() -> Config {
         freq: HSE_CLK,
         mode: HseMode::Oscillator,
     });
-    config.rcc.sys = Sysclk::Hse;
-    config.rcc.mux.fdcansel = mux::Fdcansel::Hse;
+    config.rcc.sys = Sysclk::HSE;
+    config.rcc.mux.fdcansel = mux::Fdcansel::HSE;
 
     config
 }

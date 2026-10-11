@@ -29,7 +29,7 @@ pub fn can_init<'d>(
 ) -> Result<Can<'d>, TimingCalcError> {
     let mut can = CanConfigurator::new(bus, rx, tx, Irqs);
 
-    let krnl_clk = can.properties().kernel_input_clock();
+    let krnl_clk = CAN_CLK;
     let timings = calc_can_timings(krnl_clk, BITRATE)?;
     let config = can
         .config()
@@ -51,7 +51,7 @@ pub fn can_init<'d>(
         "CAN initialized:\n\
         \tBitrate: {} kbps,\n\
         \tMode: {},\n\
-        \tKernerl clock: {} Hz,\n\
+        \tKernel clock: {} Hz,\n\
         \tPrescaler timing: {},\n\
         \tSEG1 timing: {},\n\
         \tSEG2 timing: {},\n\
