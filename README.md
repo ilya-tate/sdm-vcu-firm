@@ -29,7 +29,7 @@ gh auth login
 ```bash
 git clone https://github.com/ilya-tate/sdm-vcu-firm.git
 cd sdm-vcu-firm
-rustup target add thumbv7em-none-eabi
+rustup target add thumbv7em-none-eabihf
 ```
 
 ### Making a Change
