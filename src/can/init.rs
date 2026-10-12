@@ -13,7 +13,7 @@ use crate::clock::CAN_CLK;
 pub const BITRATE: u32 = 500_000;
 
 // Ensure bitrate matches clock
-const _: () = assert!(BITRATE > 0 && CAN_CLK.0 % BITRATE == 0);
+const _: () = assert!(BITRATE > 0 && CAN_CLK.0.is_multiple_of(BITRATE));
 
 // Can interrupts routed into embassy
 bind_interrupts!(struct Irqs {
