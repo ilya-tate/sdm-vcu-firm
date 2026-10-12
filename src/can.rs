@@ -2,12 +2,14 @@ pub mod frame;
 pub mod init;
 pub mod msg_handler;
 
-use defmt::{error, info};
+use defmt::{error, info, warn};
 use embassy_stm32::Peri;
 use embassy_stm32::can::{Can, CanRx, CanTx, OperatingMode};
 use embassy_stm32::peripherals::{FDCAN1, PA11, PA12};
-use embassy_time::Timer;
+use embassy_time::{Duration, with_timeout};
 use frame::{Frame, new_frame};
+
+const TX_TIMEOUT: Duration = Duration::from_millis(5);
 
 // 'd == driver
 pub fn try_init<'d>(
@@ -46,18 +48,15 @@ pub async fn input_listener(mut input: CanRx<'static>) {
         match input.read().await {
             Ok(envelope) => msg_handler::handle_frame(&envelope.frame),
 
-            // Bus errors repeat instantly
-            Err(e) => {
-                error!("CAN Rx ERROR: {}", e);
-                // Avoid race conditions
-                Timer::after_millis(10).await;
-            }
+            Err(e) => error!("CAN Rx ERROR: {}", e),
         }
     }
 }
 
 pub async fn try_msg(tx: &mut CanTx<'_>, id: u16, payload: &[u8]) {
     if let Some(frame) = try_frame_build(id, payload) {
-        tx.write(&frame).await;
+        if with_timeout(TX_TIMEOUT, tx.write(&frame)).await.is_err() {
+            warn!("CAN Tx: 0x{:03x} timed out", id);
+        }
     }
 }
