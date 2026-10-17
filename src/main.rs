@@ -5,54 +5,55 @@ mod can;
 mod clock;
 mod wdg;
 
-use defmt::{error, info};
+use defmt::{info, unwrap};
 use embassy_executor::Spawner;
 use embassy_stm32::can::OperatingMode;
 use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
 // Repo imports
-use can::{try_can_init, try_frame_build};
+use can::CAN_ID;
 
 // TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
 const WDG_TIMEOUT_US: u32 = 2_000_000;
 
+#[cfg(debug_assertions)]
+const CAN_MODE: OperatingMode = OperatingMode::InternalLoopbackMode;
+#[cfg(not(debug_assertions))]
+const CAN_MODE: OperatingMode = OperatingMode::NormalOperationMode;
+
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     // Clock -> CAN timing calculated from can bus clock
     let peripherals = embassy_stm32::init(clock::config());
 
     wdg::check_reset();
 
-    let Some(mut can) = try_can_init(
+    let can = match can::init::can_init(
         peripherals.FDCAN1,
         peripherals.PA11,
         peripherals.PA12,
-        OperatingMode::InternalLoopbackMode,
-    ) else {
-        return;
+        CAN_MODE,
+    ) {
+        Ok(can) => can,
+        Err(e) => defmt::panic!("CAN Init Error: {}", e),
     };
+
+    let (mut can_tx, can_rx, can_props) = can.split();
+    spawner.spawn(unwrap!(can::input_listener(can_rx)));
 
     Timer::after_secs(1).await;
     info!("SDM VCU init done");
 
     // Reset if loop stalls
-    let mut wdg = IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
+    let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
+        IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
     wdg.unleash();
 
     // Super loop
     loop {
-        if let Some(frame) = try_frame_build(0x123, &[1, 2, 3]) {
-            can.write(&frame).await;
-
-            // Waits for frame input
-            match can.read().await {
-                Ok(envelope) => info!("CAN Rx: {}", envelope.frame),
-
-                Err(e) => error!("CAN Rx ERROR: {}", e),
-            }
-        }
-
+        can::try_msg(&mut can_tx, CAN_ID, &[1, 2, 3]).await; // Test case
+        can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
     }

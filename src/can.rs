@@ -1,39 +1,74 @@
-pub mod frame;
 pub mod init;
+pub mod msg_handler;
 
-use defmt::{error, info};
-use embassy_stm32::Peri;
-use embassy_stm32::can::{Can, OperatingMode};
-use embassy_stm32::peripherals::{FDCAN1, PA11, PA12};
-use frame::{Frame, new_frame};
+use defmt::{debug, error, trace, warn};
+use embassy_stm32::can::{CanRx, CanTx, Frame, Properties, enums::BusErrorMode};
+use embassy_time::{Duration, with_timeout};
 
-// 'd == driver
-pub fn try_can_init<'d>(
-    bus: Peri<'d, FDCAN1>,
-    rx: Peri<'d, PA11>,
-    tx: Peri<'d, PA12>,
-    mode: OperatingMode,
-) -> Option<Can<'d>> {
-    match init::can_init(bus, rx, tx, mode) {
-        Ok(can) => Some(can),
+pub const CAN_ID: u16 = 0x123; // Test value
 
-        Err(e) => {
-            error!("CAN Init Error: {}", e);
-            None
+const TX_TIMEOUT: Duration = Duration::from_millis(5);
+
+pub async fn try_msg(tx: &mut CanTx<'_>, id: u16, payload: &[u8]) -> bool {
+    let Some(frame) = try_frame_build(id, payload) else {
+        return false;
+    };
+
+    match with_timeout(TX_TIMEOUT, tx.write(&frame)).await {
+        Ok(None) => true,
+
+        Ok(Some(dropped)) => {
+            warn!("CAN Tx: 0x{:03x} evicted pending {}", id, dropped);
+            true
+        }
+
+        Err(_) => {
+            warn!("CAN Tx: 0x{:03x} timed out", id);
+            false
         }
     }
 }
 
-pub fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
-    match new_frame(id, payload) {
+fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
+    match Frame::new_standard(id, payload) {
         Ok(frame) => {
-            info!("CAN Frame: {}", frame);
+            trace!("CAN Frame: {}", frame);
             Some(frame)
         }
 
         Err(e) => {
             error!("Bad frame ERROR: {}", e);
             None
+        }
+    }
+}
+
+#[embassy_executor::task]
+pub async fn input_listener(mut input: CanRx<'static>) {
+    loop {
+        match input.read().await {
+            Ok(envelope) => msg_handler::handle_frame(&envelope.frame),
+
+            Err(e) => debug!("CAN Rx ERROR: {}", e),
+        }
+    }
+}
+
+pub fn log_bus_errs(props: &Properties) {
+    let rx_errs = props.rx_error_count();
+    let tx_errs = props.tx_error_count();
+
+    match props.bus_error_mode() {
+        BusErrorMode::ErrorActive => {
+            trace!("CAN Errors Active: {} Rx, {} Tx", rx_errs, tx_errs);
+        }
+
+        BusErrorMode::ErrorPassive => {
+            warn!("CAN Errors Passive: {} Rx, {} Tx", rx_errs, tx_errs);
+        }
+
+        BusErrorMode::BusOff => {
+            error!("CAN Bus Off: {} Rx, {} Tx", rx_errs, tx_errs);
         }
     }
 }
