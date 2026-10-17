@@ -24,13 +24,14 @@ async fn main(spawner: Spawner) {
 
     wdg::check_reset();
 
-    let Some(can) = can::try_init(
+    let can = match can::init::can_init(
         peripherals.FDCAN1,
         peripherals.PA11,
         peripherals.PA12,
         OperatingMode::InternalLoopbackMode,
-    ) else {
-        defmt::panic!("CAN INIT FAILURE");
+    ) {
+        Ok(can) => can,
+        Err(e) => defmt::panic!("CAN Init Error: {}", e),
     };
 
     let (mut can_tx, can_rx, _) = can.split();
