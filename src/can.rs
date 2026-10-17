@@ -49,15 +49,26 @@ pub async fn input_listener(mut input: CanRx<'static>) {
         match input.read().await {
             Ok(envelope) => msg_handler::handle_frame(&envelope.frame),
 
-            Err(e) => error!("CAN Rx ERROR: {}", e),
+            Err(e) => debug!("CAN Rx ERROR: {}", e),
         }
     }
 }
 
-pub async fn try_msg(tx: &mut CanTx<'_>, id: u16, payload: &[u8]) {
-    if let Some(frame) = try_frame_build(id, payload) {
-        if with_timeout(TX_TIMEOUT, tx.write(&frame)).await.is_err() {
-            warn!("CAN Tx: 0x{:03x} timed out", id);
+pub fn log_bus_errs(props: &Properties) {
+    let rx_errs = props.rx_error_count();
+    let tx_errs = props.tx_error_count();
+
+    match props.bus_error_mode() {
+        BusErrorMode::ErrorActive => {
+            trace!("CAN Errors Active: {} Rx, {} Tx", rx_errs, tx_errs);
+        }
+
+        BusErrorMode::ErrorPassive => {
+            warn!("CAN Errors Passive: {} Rx, {} Tx", rx_errs, tx_errs);
+        }
+
+        BusErrorMode::BusOff => {
+            error!("CAN Bus Off: {} Rx, {} Tx", rx_errs, tx_errs);
         }
     }
 }

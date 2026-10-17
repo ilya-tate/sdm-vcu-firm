@@ -12,10 +12,15 @@ use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
 // Repo imports
-use can::msg_handler::CAN_ID;
+use can::CAN_ID;
 
 // TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
 const WDG_TIMEOUT_US: u32 = 2_000_000;
+
+#[cfg(debug_assertions)]
+const CAN_MODE: OperatingMode = OperatingMode::InternalLoopbackMode;
+#[cfg(not(debug_assertions))]
+const CAN_MODE: OperatingMode = OperatingMode::NormalOperationMode;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {

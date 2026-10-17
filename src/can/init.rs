@@ -38,12 +38,18 @@ pub fn can_init<'d>(
             seg2: timings.seg2,
             sync_jump_width: timings.sync_jump_width,
         })
-        .set_frame_transmit(FrameTransmissionConfig::ClassicCanOnly);
+        .set_frame_transmit(FrameTransmissionConfig::ClassicCanOnly)
+        .set_global_filter(GlobalFilter::reject_all());
     can.set_config(config);
 
     // Route identifiers to Rx, FIFO
-    can.properties()
-        .set_standard_filter(FilterSlot::_0, Filter::accept_all_into_fifo0());
+    can.properties().set_standard_filter(
+        FilterSlot::_0,
+        Filter {
+            filter: FilterType::DedicatedSingle(unwrap!(StandardId::new(CAN_ID))),
+            action: Action::StoreInFifo0,
+        },
+    );
 
     let can = can.start(mode);
     info!(
