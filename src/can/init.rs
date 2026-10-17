@@ -1,21 +1,21 @@
-use defmt::info;
-use embassy_stm32::can::config::{FrameTransmissionConfig, NominalBitTiming};
+use defmt::{info, unwrap};
+use embassy_stm32::can::config::{FrameTransmissionConfig, GlobalFilter, NominalBitTiming};
 use embassy_stm32::can::enums::TimingCalcError;
-use embassy_stm32::can::filter::{StandardFilter as Filter, StandardFilterSlot as FilterSlot};
+use embassy_stm32::can::filter::{
+    Action, FilterType, StandardFilter as Filter, StandardFilterSlot as FilterSlot,
+};
 use embassy_stm32::can::util::calc_can_timings;
 use embassy_stm32::can::{self, Can, CanConfigurator, OperatingMode};
 use embassy_stm32::peripherals::{FDCAN1, PA11, PA12};
 use embassy_stm32::{Peri, bind_interrupts};
+use embedded_can::StandardId;
 
+use super::CAN_ID;
 use crate::clock::CAN_CLK;
 
 // Bitrate/baudrate constant across car
 pub const BITRATE: u32 = 500_000;
 
-// Ensure bitrate matches clock
-const _: () = assert!(BITRATE > 0 && CAN_CLK.0.is_multiple_of(BITRATE));
-
-// Can interrupts routed into embassy
 bind_interrupts!(struct Irqs {
     FDCAN1_IT0 => can::IT0InterruptHandler<FDCAN1>;
     FDCAN1_IT1 => can::IT1InterruptHandler<FDCAN1>;
@@ -29,8 +29,7 @@ pub fn can_init<'d>(
 ) -> Result<Can<'d>, TimingCalcError> {
     let mut can = CanConfigurator::new(bus, rx, tx, Irqs);
 
-    let krnl_clk = CAN_CLK;
-    let timings = calc_can_timings(krnl_clk, BITRATE)?;
+    let timings = calc_can_timings(CAN_CLK, BITRATE)?;
     let config = can
         .config()
         .set_nominal_bit_timing(NominalBitTiming {
@@ -58,7 +57,7 @@ pub fn can_init<'d>(
         \tSync jump width: {}",
         BITRATE / 1_000,
         mode,
-        krnl_clk.0,
+        CAN_CLK.0,
         timings.prescaler.get(),
         timings.seg1.get(),
         timings.seg2.get(),

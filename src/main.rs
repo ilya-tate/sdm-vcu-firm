@@ -28,25 +28,27 @@ async fn main(spawner: Spawner) {
         peripherals.FDCAN1,
         peripherals.PA11,
         peripherals.PA12,
-        OperatingMode::InternalLoopbackMode,
+        CAN_MODE,
     ) {
         Ok(can) => can,
         Err(e) => defmt::panic!("CAN Init Error: {}", e),
     };
 
-    let (mut can_tx, can_rx, _) = can.split();
+    let (mut can_tx, can_rx, can_props) = can.split();
     spawner.spawn(unwrap!(can::input_listener(can_rx)));
 
     Timer::after_secs(1).await;
     info!("SDM VCU init done");
 
     // Reset if loop stalls
-    let mut wdg = IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
+    let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
+        IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
     wdg.unleash();
 
     // Super loop
     loop {
-        can::try_msg(&mut can_tx, CAN_ID, &[1, 2, 3]).await;
+        can::try_msg(&mut can_tx, CAN_ID, &[1, 2, 3]).await; // Test case
+        can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
     }

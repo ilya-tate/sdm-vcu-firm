@@ -2,7 +2,7 @@ use defmt::{info, trace, warn};
 use embassy_stm32::can::Frame;
 use embedded_can::Id::Standard as CanID;
 
-pub const CAN_ID: u16 = 0x123; // Test value
+use super::CAN_ID;
 
 pub(super) fn handle_frame(frame: &Frame) {
     // Get frame id
