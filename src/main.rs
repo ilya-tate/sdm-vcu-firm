@@ -2,7 +2,7 @@
 #![no_main]
 
 mod can;
-mod clock;
+mod clocks;
 mod wdg;
 
 use defmt::{info, unwrap};
@@ -23,9 +23,9 @@ const CAN_MODE: OperatingMode = OperatingMode::NormalOperationMode;
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     // Clock -> CAN timing calculated from can bus clock
-    let peripherals = embassy_stm32::init(clock::config());
+    let peripherals = embassy_stm32::init(clocks::config());
 
-    clock::verify(&peripherals.RCC);
+    clocks::verify(&peripherals.RCC);
 
     wdg::check_reset();
 

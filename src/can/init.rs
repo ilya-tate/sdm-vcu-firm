@@ -11,7 +11,7 @@ use embassy_stm32::{Peri, bind_interrupts};
 use embedded_can::StandardId;
 
 use super::CAN_ID;
-use crate::clock::CAN_CLK;
+use crate::clocks::CAN_CLK;
 
 // Bitrate/baudrate constant across car
 pub const BITRATE: u32 = 500_000;
