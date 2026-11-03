@@ -2,9 +2,8 @@
 
 **Status:**
 
-- Early development, CAN 2.0 currently being implemented
-- Pending hardware testing, not yet shipped
 - A custom PCB using the STM32-G4 is currently in development
+- CAN 2.0 test frames working, not yet tested with transceivers
 
 ## Gitutorial:
 
