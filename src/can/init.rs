@@ -39,6 +39,9 @@ pub fn can_init<'d>(
             sync_jump_width: timings.sync_jump_width,
         })
         .set_frame_transmit(FrameTransmissionConfig::ClassicCanOnly)
+        .set_automatic_retransmit(false)
+        .set_transmit_pause(true)
+        .set_automatic_bus_off_recovery(true)
         .set_global_filter(GlobalFilter::reject_all());
     can.set_config(config);
 
