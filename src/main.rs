@@ -63,8 +63,10 @@ async fn main(spawner: Spawner) {
 
     // Super loop
     loop {
-        #[cfg(debug_assertions)]
-        can::queue_msg(can::CAN_ID, &[1, 2, 3]); // Test case
+        let payloads: [&[u8]; 4] = [&[1, 2, 3], &[4, 5, 6], &[7, 8, 9], &[0; 9]];
+        for payload in payloads {
+            can::queue_msg(can::CAN_ID, payload); // Test case
+        }
         can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
