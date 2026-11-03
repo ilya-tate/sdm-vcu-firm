@@ -11,8 +11,6 @@ use embassy_stm32::can::OperatingMode;
 use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
-// Repo imports
-use can::CAN_ID;
 
 // TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
 const WDG_TIMEOUT_US: u32 = 2_000_000;
@@ -39,8 +37,19 @@ async fn main(spawner: Spawner) {
         Err(e) => defmt::panic!("CAN Init Error: {}", e),
     };
 
-    let (mut can_tx, can_rx, can_props) = can.split();
-    spawner.spawn(unwrap!(can::input_listener(can_rx)));
+    let (can_tx, can_rx, can_props) = can.split();
+    spawner.spawn(unwrap!(can::input_listener(
+        can_rx,
+        can::channels::IN.dyn_sender(),
+    )));
+    spawner.spawn(unwrap!(can::input_processor(
+        can::channels::IN.dyn_receiver()
+    )));
+    spawner.spawn(unwrap!(can::output_sender(
+        can_tx,
+        can::channels::OUT.dyn_receiver(),
+        can::channels::OUT.dyn_sender(),
+    )));
 
     Timer::after_secs(1).await;
     info!("SDM VCU init done");
@@ -52,7 +61,8 @@ async fn main(spawner: Spawner) {
 
     // Super loop
     loop {
-        can::try_msg(&mut can_tx, CAN_ID, &[1, 2, 3]).await; // Test case
+        #[cfg(debug_assertions)]
+        can::queue_msg(can::CAN_ID, &[1, 2, 3]); // Test case
         can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
