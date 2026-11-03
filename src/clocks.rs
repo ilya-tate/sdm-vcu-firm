@@ -1,6 +1,8 @@
-use embassy_stm32::Config;
-use embassy_stm32::rcc::{Hse, HseMode, Sysclk, mux};
-use embassy_stm32::time::{Hertz, mhz};
+use embassy_stm32::pac::RCC;
+use embassy_stm32::peripherals::RCC as RccPeri;
+use embassy_stm32::rcc::{self, Hse, HseMode, Sysclk, mux};
+use embassy_stm32::time::{Hertz, MaybeHertz, mhz};
+use embassy_stm32::{Config, Peri};
 
 // Clocks set for NUCLEO-G474RE
 // Forced to be equal without PLLs
@@ -36,4 +38,33 @@ pub fn config() -> Config {
     config.rcc.mux.fdcansel = mux::Fdcansel::HSE;
 
     config
+}
+
+// Ensures configged clocks equal board clocks
+pub fn verify(rcc_peri: &Peri<'_, RccPeri>) {
+    let clocks = rcc::clocks(rcc_peri);
+
+    let can = match RCC.ccipr().read().fdcansel() {
+        mux::Fdcansel::HSE => clocks.hse,
+        mux::Fdcansel::PLL1_Q => clocks.pll1_q,
+        _ => clocks.pclk1,
+    };
+
+    check("HSE", HSE_CLK, clocks.hse);
+    check("SYS", SYS_CLK, clocks.sys);
+    check("CAN", CAN_CLK, can);
+}
+
+fn check(name: &str, expected: Hertz, actual: MaybeHertz) {
+    let actual = actual.to_hertz().map_or(0, |hz| hz.0);
+    let diff = actual as i64 - expected.0 as i64;
+
+    defmt::assert!(
+        diff == 0,
+        "Clock Error: {} is {} Hz, expected {} Hz, off by {} Hz",
+        name,
+        actual,
+        expected.0,
+        diff
+    );
 }
