@@ -17,7 +17,10 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
     };
 
     match channels::OUT.try_send(frame) {
-        Ok(()) => true,
+        Ok(()) => {
+            trace!("CAN Tx: Queued {}", frame);
+            true
+        }
 
         Err(_) => {
             warn!("CAN Tx ERROR: Dropping {}, queue full", frame);
