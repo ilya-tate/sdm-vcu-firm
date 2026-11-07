@@ -3,13 +3,29 @@ pub mod init;
 #[cfg(debug_assertions)]
 pub mod test_frames;
 
-use defmt::{debug, error, info, trace, warn};
+use defmt::{debug, error, trace, warn};
 use embassy_stm32::can::{CanRx, CanTx, Frame, Properties, enums::BusErrorMode};
 use embassy_sync::channel::{DynamicReceiver, DynamicSender};
 use embassy_time::{Duration, TimeoutError, with_timeout};
-use embedded_can::Id::Standard as CanID;
+use embedded_can::Id;
+
+// TODO: Store error messages separately
 
 const TX_TIMEOUT: Duration = Duration::from_millis(5);
+
+// Copies of frame from build
+struct Msg<'a> {
+    id: u32,
+    payload: &'a [u8],
+}
+
+// To allow canFD frames to be logged later
+fn get_frame_id(frame: &Frame) -> u32 {
+    match frame.id() {
+        Id::Standard(id) => id.as_raw().into(),
+        Id::Extended(id) => id.as_raw(),
+    }
+}
 
 pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
     let Some(frame) = try_frame_build(id, payload) else {
@@ -18,12 +34,15 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
 
     match channels::OUT.try_send(frame) {
         Ok(()) => {
-            trace!("CAN Tx: Queued {}", frame);
+            trace!("CAN Tx: Queued 0x{:03x}", get_frame_id(&frame));
             true
         }
 
         Err(_) => {
-            warn!("CAN Tx ERROR: Dropping {}, queue full", frame);
+            warn!(
+                "CAN Tx ERROR: Queue full, dropping 0x{:03x}",
+                get_frame_id(&frame)
+            );
             false
         }
     }
@@ -32,29 +51,37 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
 fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     match Frame::new_standard(id, payload) {
         Ok(frame) => {
-            trace!("CAN Tx: Built {}", frame);
+            trace!("CAN Tx: Built frame 0x{:03x} {:02x}", id, payload);
             Some(frame)
         }
 
         Err(e) => {
-            error!("CAN Tx ERROR: Bad frame for {}, {}", id, e);
+            error!("CAN Tx ERROR: Bad frame 0x{:03x},\n\t{}", id, e);
             None
         }
     }
 }
 
-fn handle_frame(frame: &Frame) {
-    // Get frame id
-    let CanID(id) = *frame.id() else { return };
-    let id: u16 = id.as_raw();
+fn try_msg_build(frame: &Frame) -> Option<Msg<'_>> {
+    // Get frame id if not FD
+    if matches!(frame.id(), Id::Extended(_)) {
+        warn!(
+            "CAN Rx: Ignored 0x{:08x}, canFD not supported",
+            get_frame_id(frame)
+        );
+        return None;
+    }
+    let id: u32 = get_frame_id(frame);
 
     // No payload -> Ignore frame
     if frame.header().rtr() {
         warn!("CAN Rx: Ignored 0x{:03x}, does not contain payload", id);
-        return;
+        return None;
     }
+    let payload = frame.data();
 
-    info!("CAN Rx: 0x{:03x} {:02x}", id, frame.data());
+    trace!("CAN Rx: Built frame, 0x{:03x} {:02x}", id, payload);
+    Some(Msg { id, payload })
 }
 
 #[embassy_executor::task]
@@ -70,13 +97,19 @@ pub async fn output_sender(
             Ok(None) => {}
 
             // Make room for higher priority frames
-            Ok(Some(bumped)) => {
-                if requeue.try_send(bumped).is_err() {
-                    warn!("CAN Tx ERROR: Dropping bumped {}, queue full", bumped);
+            Ok(Some(frame)) => {
+                if requeue.try_send(frame).is_err() {
+                    warn!(
+                        "CAN Tx ERROR: Queue full, dropping 0x{:03x}",
+                        get_frame_id(&frame)
+                    );
                 }
             }
 
-            Err(TimeoutError) => warn!("CAN Tx ERROR: Dropping {}, timed out", frame),
+            Err(TimeoutError) => warn!(
+                "CAN Tx ERROR: Timeout, dropping 0x{:03x}",
+                get_frame_id(&frame)
+            ),
         }
     }
 }
@@ -87,7 +120,10 @@ pub async fn input_listener(mut rx_bus: CanRx<'static>, queue: DynamicSender<'st
         match rx_bus.read().await {
             Ok(envelope) => {
                 if queue.try_send(envelope.frame).is_err() {
-                    warn!("CAN Rx ERROR: Dropping {}, queue full", envelope.frame);
+                    warn!(
+                        "CAN Rx ERROR: Queue full, dropping 0x{:03x}",
+                        get_frame_id(&envelope.frame)
+                    );
                 }
             }
 
@@ -100,7 +136,7 @@ pub async fn input_listener(mut rx_bus: CanRx<'static>, queue: DynamicSender<'st
 pub async fn input_processor(queue: DynamicReceiver<'static, Frame>) -> ! {
     loop {
         let frame = queue.receive().await;
-        msg_handler::handle_frame(&frame);
+        let _ = try_msg_build(&frame);
     }
 }
 
@@ -110,15 +146,21 @@ pub fn log_bus_errs(props: &Properties) {
 
     match props.bus_error_mode() {
         BusErrorMode::ErrorActive => {
-            trace!("CAN Errors Active: {} Rx, {} Tx", rx_errs, tx_errs);
+            trace!(
+                "CAN Bus: ERROR active\nErrors: {} Rx, {} Tx",
+                rx_errs, tx_errs
+            );
         }
 
         BusErrorMode::ErrorPassive => {
-            warn!("CAN Errors Passive: {} Rx, {} Tx", rx_errs, tx_errs);
+            warn!(
+                "CAN Bus: ERROR passive\nErrors: {} Rx, {} Tx",
+                rx_errs, tx_errs
+            );
         }
 
         BusErrorMode::BusOff => {
-            error!("CAN Bus Off: {} Rx, {} Tx", rx_errs, tx_errs);
+            error!("CAN Bus: Off\nErrors: {} Rx, {} Tx", rx_errs, tx_errs);
         }
     }
 }
