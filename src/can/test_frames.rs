@@ -3,7 +3,6 @@ use embassy_time::{Duration, Timer};
 use super::queue_msg;
 
 const FRAME_GAP: Duration = Duration::from_millis(100);
-const CYCLE_GAP: Duration = Duration::from_secs(2);
 
 const FRAMES: &[(u16, &[u8])] = &[
     (0x000, &[]),
@@ -14,12 +13,12 @@ const FRAMES: &[(u16, &[u8])] = &[
 
 #[embassy_executor::task]
 pub async fn send_test_frames() -> ! {
-    loop {
-        for &(id, payload) in FRAMES {
-            queue_msg(id, payload);
-            Timer::after(FRAME_GAP).await;
-        }
+    for &(id, payload) in FRAMES {
+        queue_msg(id, payload);
+        Timer::after(FRAME_GAP).await;
+    }
 
-        Timer::after(CYCLE_GAP).await;
+    loop {
+        core::future::pending::<()>().await;
     }
 }
