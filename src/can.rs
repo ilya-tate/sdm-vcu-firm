@@ -1,13 +1,13 @@
 pub mod channels;
 pub mod init;
-pub mod msg_handler;
 #[cfg(debug_assertions)]
 pub mod test_frames;
 
-use defmt::{debug, error, trace, warn};
+use defmt::{debug, error, info, trace, warn};
 use embassy_stm32::can::{CanRx, CanTx, Frame, Properties, enums::BusErrorMode};
 use embassy_sync::channel::{DynamicReceiver, DynamicSender};
 use embassy_time::{Duration, TimeoutError, with_timeout};
+use embedded_can::Id::Standard as CanID;
 
 const TX_TIMEOUT: Duration = Duration::from_millis(5);
 
@@ -41,6 +41,20 @@ fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
             None
         }
     }
+}
+
+fn handle_frame(frame: &Frame) {
+    // Get frame id
+    let CanID(id) = *frame.id() else { return };
+    let id: u16 = id.as_raw();
+
+    // No payload -> Ignore frame
+    if frame.header().rtr() {
+        warn!("CAN Rx: Ignored 0x{:03x}, does not contain payload", id);
+        return;
+    }
+
+    info!("CAN Rx: 0x{:03x} {:02x}", id, frame.data());
 }
 
 #[embassy_executor::task]
