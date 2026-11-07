@@ -1,13 +1,13 @@
 pub mod channels;
 pub mod init;
 pub mod msg_handler;
+#[cfg(debug_assertions)]
+pub mod test_frames;
 
 use defmt::{debug, error, trace, warn};
 use embassy_stm32::can::{CanRx, CanTx, Frame, Properties, enums::BusErrorMode};
 use embassy_sync::channel::{DynamicReceiver, DynamicSender};
 use embassy_time::{Duration, TimeoutError, with_timeout};
-
-pub const CAN_ID: u16 = 0x123; // Test value
 
 const TX_TIMEOUT: Duration = Duration::from_millis(5);
 

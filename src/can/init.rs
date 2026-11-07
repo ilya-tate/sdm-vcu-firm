@@ -1,16 +1,11 @@
-use defmt::{info, unwrap};
+use defmt::info;
 use embassy_stm32::can::config::{FrameTransmissionConfig, GlobalFilter, NominalBitTiming};
 use embassy_stm32::can::enums::TimingCalcError;
-use embassy_stm32::can::filter::{
-    Action, FilterType, StandardFilter as Filter, StandardFilterSlot as FilterSlot,
-};
 use embassy_stm32::can::util::calc_can_timings;
 use embassy_stm32::can::{self, Can, CanConfigurator, OperatingMode};
 use embassy_stm32::peripherals::{FDCAN1, PA11, PA12};
 use embassy_stm32::{Peri, bind_interrupts};
-use embedded_can::StandardId;
 
-use super::CAN_ID;
 use crate::clocks::CAN_CLK;
 
 // Bitrate/baudrate constant across car
@@ -42,17 +37,11 @@ pub fn can_init<'d>(
         .set_automatic_retransmit(false)
         .set_transmit_pause(true)
         .set_automatic_bus_off_recovery(true)
-        .set_global_filter(GlobalFilter::reject_all());
+        .set_global_filter(
+            GlobalFilter::reject_all()
+                .set_handle_standard_frames(can::config::NonMatchingFilter::IntoRxFifo0),
+        );
     can.set_config(config);
-
-    // Route identifiers to Rx, FIFO
-    can.properties().set_standard_filter(
-        FilterSlot::_0,
-        Filter {
-            filter: FilterType::DedicatedSingle(unwrap!(StandardId::new(CAN_ID))),
-            action: Action::StoreInFifo0,
-        },
-    );
 
     let can = can.start(mode);
     info!(

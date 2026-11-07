@@ -1,8 +1,6 @@
-use defmt::{info, trace, warn};
+use defmt::{info, warn};
 use embassy_stm32::can::Frame;
 use embedded_can::Id::Standard as CanID;
-
-use super::CAN_ID;
 
 pub(super) fn handle_frame(frame: &Frame) {
     // Get frame id
@@ -15,9 +13,5 @@ pub(super) fn handle_frame(frame: &Frame) {
         return;
     }
 
-    match id {
-        CAN_ID => info!("CAN Rx: {:02x}, as input test", frame.data()),
-
-        _ => trace!("CAN Rx: 0x{:03x} not handled", id),
-    }
+    info!("CAN Rx: 0x{:03x} {:02x}", id, frame.data());
 }

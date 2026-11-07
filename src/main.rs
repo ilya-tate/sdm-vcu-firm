@@ -52,6 +52,8 @@ async fn main(spawner: Spawner) {
         can::channels::OUT.dyn_receiver(),
         can::channels::OUT.dyn_sender(),
     )));
+    #[cfg(debug_assertions)]
+    spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
 
     Timer::after_secs(1).await;
     info!("SDM VCU init done");
@@ -63,8 +65,6 @@ async fn main(spawner: Spawner) {
 
     // Super loop
     loop {
-        #[cfg(debug_assertions)]
-        can::queue_msg(can::CAN_ID, &[1, 2, 3]); // Test case
         can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
