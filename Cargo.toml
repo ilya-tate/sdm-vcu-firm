@@ -5,6 +5,12 @@ edition = "2024"
 rust-version = "1.98.1"
 license = "MIT"
 
+[[bin]]
+name = "sdm-vcu-firm"
+path = "src/main.rs"
+test = false
+bench = false
+
 [dependencies]
 embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "defmt"] }
 embassy-stm32 = { version = "0.6.0", features = ["defmt", "time-driver-any", "stm32g474re", "memory-x", "unstable-pac", "exti", "dual-bank"] }
