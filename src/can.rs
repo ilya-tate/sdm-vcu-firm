@@ -147,20 +147,20 @@ pub fn log_bus_errs(props: &Properties) {
     match props.bus_error_mode() {
         BusErrorMode::ErrorActive => {
             trace!(
-                "CAN Bus: ERROR active\nErrors: {} Rx, {} Tx",
+                "CAN Bus: ERROR active\n\t\t Errors: {} Rx, {} Tx",
                 rx_errs, tx_errs
             );
         }
 
         BusErrorMode::ErrorPassive => {
             warn!(
-                "CAN Bus: ERROR passive\nErrors: {} Rx, {} Tx",
+                "CAN Bus: ERROR passive\n\t\t Errors: {} Rx, {} Tx",
                 rx_errs, tx_errs
             );
         }
 
         BusErrorMode::BusOff => {
-            error!("CAN Bus: Off\nErrors: {} Rx, {} Tx", rx_errs, tx_errs);
+            error!("CAN Bus: Off\n\t\t Errors: {} Rx, {} Tx", rx_errs, tx_errs);
         }
     }
 }
