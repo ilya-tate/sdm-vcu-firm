@@ -3,18 +3,10 @@
 ### Dev Dependencies
 
 - [rustup](https://rustup.rs)
-- [probe-rs](https://probe.rs/docs/getting-started/installation/) - [git](https://git-scm.com/downloads)
-- [github-cli](https://cli.github.com)
-  > Optional if using SSH for auth
+- [probe-rs](https://probe.rs/docs/getting-started/installation/)
+- [git](https://git-scm.com/downloads)
 
 ### First-Time Startup
-
-**Authenticate GitHub CLI:**
-
-```bash
-gh auth login
-# Follow CLI prompts
-```
 
 **Clone:**
 
@@ -51,8 +43,6 @@ git add <edited-files>   # Ex. git add bruh.txt src/foo.rs
 # "git add -A" to add all edited files (run "git status" first tho)
 git commit -m "DESCRIPTION" # Ex. git commit -m "Fixed this bug which caused that problem"
 git push -u origin HEAD
-gh pr create
-# Follow CLI prompts
 ```
 
 ### Requested Changes
