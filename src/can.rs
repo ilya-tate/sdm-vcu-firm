@@ -126,6 +126,7 @@ pub async fn input_listener(
         match rx_bus.read().await {
             Ok(envelope) => {
                 let frame = envelope.frame;
+                trace!("CAN Rx: Received 0x{:03x}", get_frame_id(&frame));
                 if queue.try_send(Ok(frame)).is_err() {
                     warn!(
                         "CAN Rx ERROR: Queue full, dropping 0x{:03x}",

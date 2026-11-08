@@ -52,8 +52,6 @@ async fn main(spawner: Spawner) {
         can::channels::OUT.dyn_receiver(),
         can::channels::OUT.dyn_sender(),
     )));
-    #[cfg(debug_assertions)]
-    spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
 
     Timer::after_secs(1).await;
     info!("SDM VCU init done");
@@ -62,6 +60,11 @@ async fn main(spawner: Spawner) {
     let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
         IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
     wdg.unleash();
+
+    // Test frames
+    // Sent when "--release" is omitted from cargo run
+    #[cfg(debug_assertions)]
+    spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
 
     // Super loop
     loop {
