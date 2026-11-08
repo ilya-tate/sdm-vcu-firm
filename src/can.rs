@@ -97,7 +97,9 @@ pub async fn output_sender(
         let frame = queue.receive().await;
 
         match with_timeout(TX_TIMEOUT, tx_bus.write(&frame)).await {
-            Ok(None) => {}
+            Ok(None) => {
+                trace!("CAN Tx: Sent, {}", &frame)
+            }
 
             // Make room for higher priority frames
             Ok(Some(frame)) => {
