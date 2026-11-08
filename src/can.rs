@@ -3,10 +3,13 @@ pub mod init;
 #[cfg(debug_assertions)]
 pub mod test_frames;
 
-use defmt::{debug, error, trace, warn};
-use embassy_stm32::can::{CanRx, CanTx, Frame, Properties, enums::BusErrorMode};
+use defmt::{error, trace, warn};
+use embassy_stm32::can::{
+    CanRx, CanTx, Frame, Properties,
+    enums::{BusError, BusErrorMode},
+};
 use embassy_sync::channel::{DynamicReceiver, DynamicSender};
-use embassy_time::{Duration, TimeoutError, with_timeout};
+use embassy_time::{Duration, TimeoutError, Timer, with_timeout};
 use embedded_can::Id;
 
 // TODO: Store error messages separately
@@ -80,7 +83,7 @@ fn try_msg_build(frame: &Frame) -> Option<Msg<'_>> {
     }
     let payload = frame.data();
 
-    trace!("CAN Rx: Built frame, 0x{:03x} {:02x}", id, payload);
+    trace!("CAN Rx: Building 0x{:03x}", id);
     Some(Msg { id, payload })
 }
 
@@ -115,28 +118,44 @@ pub async fn output_sender(
 }
 
 #[embassy_executor::task]
-pub async fn input_listener(mut rx_bus: CanRx<'static>, queue: DynamicSender<'static, Frame>) -> ! {
+pub async fn input_listener(
+    mut rx_bus: CanRx<'static>,
+    queue: DynamicSender<'static, Result<Frame, BusError>>,
+) -> ! {
     loop {
         match rx_bus.read().await {
             Ok(envelope) => {
-                if queue.try_send(envelope.frame).is_err() {
+                let frame = envelope.frame;
+                if queue.try_send(Ok(frame)).is_err() {
                     warn!(
                         "CAN Rx ERROR: Queue full, dropping 0x{:03x}",
-                        get_frame_id(&envelope.frame)
+                        get_frame_id(&frame)
                     );
                 }
             }
 
-            Err(e) => debug!("CAN Rx ERROR: Bus error, {}", e),
+            Err(e) => {
+                // Skip errors to maintian frame priority
+                let _ = queue.try_send(Err(e));
+                // Stops instantly repeating errors
+                Timer::after_millis(10).await;
+            }
         }
     }
 }
 
 #[embassy_executor::task]
-pub async fn input_processor(queue: DynamicReceiver<'static, Frame>) -> ! {
+pub async fn input_processor(queue: DynamicReceiver<'static, Result<Frame, BusError>>) -> ! {
     loop {
-        let frame = queue.receive().await;
-        let _ = try_msg_build(&frame);
+        match queue.receive().await {
+            Ok(frame) => {
+                if let Some(msg) = try_msg_build(&frame) {
+                    trace!("CAN Rx: Built frame, 0x{:03x} {:02x}", msg.id, msg.payload)
+                }
+            }
+
+            Err(e) => warn!("CAN Rx ERROR: Bus error, {}", e),
+        }
     }
 }
 
