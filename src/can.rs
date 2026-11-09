@@ -1,4 +1,5 @@
 pub mod channels;
+pub mod cmd;
 pub mod init;
 #[cfg(debug_assertions)]
 pub mod test_frames;
@@ -83,7 +84,6 @@ fn try_msg_build(frame: &Frame) -> Option<Msg<'_>> {
     }
     let payload = frame.data();
 
-    trace!("CAN Rx: Building 0x{:03x}", id);
     Some(Msg { id, payload })
 }
 
@@ -128,7 +128,6 @@ pub async fn input_listener(
         match rx_bus.read().await {
             Ok(envelope) => {
                 let frame = envelope.frame;
-                trace!("CAN Rx: Received 0x{:03x}", get_frame_id(&frame));
                 if queue.try_send(Ok(frame)).is_err() {
                     warn!(
                         "CAN Rx ERROR: Queue full, dropping 0x{:03x}",
@@ -138,10 +137,11 @@ pub async fn input_listener(
             }
 
             Err(e) => {
+                warn!("Can Rx: Error, {}", e);
                 // Skip errors to maintian frame priority
                 let _ = queue.try_send(Err(e));
                 // Stops instantly repeating errors
-                Timer::after_millis(10).await;
+                //Timer::after_millis(10).await;
             }
         }
     }
