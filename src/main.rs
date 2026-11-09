@@ -3,6 +3,7 @@
 
 mod can;
 mod clocks;
+mod devices;
 mod wdg;
 
 use defmt::{info, unwrap};
@@ -52,9 +53,7 @@ async fn main(spawner: Spawner) {
         can::channels::OUT.dyn_receiver(),
         can::channels::OUT.dyn_sender(),
     )));
-
-    Timer::after_secs(1).await;
-    info!("SDM VCU init done");
+    spawner.spawn(unwrap!(devices::motor_controller::send_cmds()));
 
     // Reset if loop stalls
     let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
@@ -66,10 +65,15 @@ async fn main(spawner: Spawner) {
     #[cfg(debug_assertions)]
     spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
 
+    Timer::after_secs(1).await;
+    info!("SDM VCU init done");
+
     // Super loop
     loop {
         can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
+        devices::motor_controller::clear_faults();
+        devices::motor_controller::test();
     }
 }
