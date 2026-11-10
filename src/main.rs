@@ -1,13 +1,11 @@
 #![no_std]
 #![no_main]
 
-
-
 use defmt::{info, unwrap};
 use embassy_executor::Spawner;
-use sdm_vcu_firm::{CAN_MODE, WDG_TIMEOUT_US, can, clocks, wdg};
 use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::Timer;
+use sdm_vcu_firm::{CAN_MODE, WDG_TIMEOUT_US, can, clocks, wdg};
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
@@ -52,7 +50,7 @@ async fn main(spawner: Spawner) {
     let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
         IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
     wdg.unleash();
-    
+
     // Super loop
     loop {
         #[cfg(debug_assertions)]
