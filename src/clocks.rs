@@ -4,12 +4,12 @@ use embassy_stm32::rcc::{self, Hse, HseMode, Sysclk, mux};
 use embassy_stm32::time::{Hertz, MaybeHertz, mhz};
 use embassy_stm32::{Config, Peri};
 
-// Clocks set for NUCLEO-G474RE
-// Forced to be equal without PLLs
+/// Clocks set for NUCLEO-G474RE
+/// Forced to be equal without PLLs
 pub const HSE_CLK: Hertz = mhz(24); // Crystal x3 @ 24mhz
 pub const SYS_CLK: Hertz = HSE_CLK; // Core/bus clock
 pub const CAN_CLK: Hertz = HSE_CLK; // canFD bus, divisible by bitrate
-// Clock limits
+/// Clock limits
 const HSE_CLK_MIN: Hertz = mhz(4);
 const HSE_CLK_MAX: Hertz = mhz(48);
 const SYS_CLK_MAX: Hertz = mhz(170);
@@ -26,6 +26,7 @@ const _: () = assert!(HSE_CLK.0 <= HSE_CLK_MAX.0);
 const _: () = assert!(SYS_CLK.0 <= SYS_CLK_MAX.0);
 const _: () = assert!(CAN_CLK.0 <= CAN_CLK_MAX.0);
 
+/// Returns a Config struct for the STM32G4 clocks, setting HSE as the source for SYSCLK and FDCAN.
 pub fn config() -> Config {
     let mut config = Config::default();
 
@@ -40,7 +41,7 @@ pub fn config() -> Config {
     config
 }
 
-// Ensures configged clocks equal board clocks
+/// Ensures configged clocks equal board clocks
 pub fn verify(rcc_peri: &Peri<'_, RccPeri>) {
     let clocks = rcc::clocks(rcc_peri);
 
@@ -55,6 +56,7 @@ pub fn verify(rcc_peri: &Peri<'_, RccPeri>) {
     check("CAN", CAN_CLK, can);
 }
 
+/// Checks if the actual clock frequency matches the expected frequency and logs an error if they differ.
 fn check(name: &str, expected: Hertz, actual: MaybeHertz) {
     let actual = actual.to_hertz().map_or(0, |hz| hz.0);
     let diff = actual as i64 - expected.0 as i64;

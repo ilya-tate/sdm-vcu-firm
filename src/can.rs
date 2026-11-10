@@ -11,6 +11,7 @@ pub const CAN_ID: u16 = 0x123; // Test value
 
 const TX_TIMEOUT: Duration = Duration::from_millis(5);
 
+/// Queues a CAN message for transmission. Returns true if the message was successfully queued, false otherwise.
 pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
     let Some(frame) = try_frame_build(id, payload) else {
         return false;
@@ -29,6 +30,7 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
     }
 }
 
+/// Attempts to build a CAN frame with the given ID and payload. Returns Some(Frame) if successful, None otherwise.
 fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     match Frame::new_standard(id, payload) {
         Ok(frame) => {
@@ -43,6 +45,7 @@ fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     }
 }
 
+/// Spawns tasks for sending and receiving CAN messages, as well as processing received messages.
 #[embassy_executor::task]
 pub async fn output_sender(
     mut tx_bus: CanTx<'static>,
@@ -67,6 +70,7 @@ pub async fn output_sender(
     }
 }
 
+/// Spawns a task for listening to incoming CAN messages and forwarding them to a queue for processing.
 #[embassy_executor::task]
 pub async fn input_listener(mut rx_bus: CanRx<'static>, queue: DynamicSender<'static, Frame>) -> ! {
     loop {
@@ -82,6 +86,7 @@ pub async fn input_listener(mut rx_bus: CanRx<'static>, queue: DynamicSender<'st
     }
 }
 
+/// Spawns a task for processing incoming CAN messages from a queue.
 #[embassy_executor::task]
 pub async fn input_processor(queue: DynamicReceiver<'static, Frame>) -> ! {
     loop {
@@ -90,6 +95,7 @@ pub async fn input_processor(queue: DynamicReceiver<'static, Frame>) -> ! {
     }
 }
 
+/// Logs the current CAN bus error counts and mode, providing insight into the health of the CAN bus.
 pub fn log_bus_errs(props: &Properties) {
     let rx_errs = props.rx_error_count();
     let tx_errs = props.tx_error_count();
