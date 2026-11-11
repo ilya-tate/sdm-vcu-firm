@@ -1,16 +1,16 @@
 pub mod channels;
-pub mod cmd;
+pub mod devices;
 pub mod init;
 #[cfg(debug_assertions)]
 pub mod test_frames;
 
-use defmt::{error, trace, warn};
+use defmt::{error, println, warn};
 use embassy_stm32::can::{
     CanRx, CanTx, Frame, Properties,
     enums::{BusError, BusErrorMode},
 };
 use embassy_sync::channel::{DynamicReceiver, DynamicSender};
-use embassy_time::{Duration, TimeoutError, Timer, with_timeout};
+use embassy_time::{Duration, TimeoutError, with_timeout};
 use embedded_can::Id;
 
 // TODO: Store error messages separately
@@ -37,10 +37,7 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
     };
 
     match channels::OUT.try_send(frame) {
-        Ok(()) => {
-            trace!("CAN Tx: Queued 0x{:03x}", get_frame_id(&frame));
-            true
-        }
+        Ok(()) => true,
 
         Err(_) => {
             warn!(
@@ -54,10 +51,7 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
 
 fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     match Frame::new_standard(id, payload) {
-        Ok(frame) => {
-            trace!("CAN Tx: Built frame 0x{:03x} {:02x}", id, payload);
-            Some(frame)
-        }
+        Ok(frame) => Some(frame),
 
         Err(e) => {
             error!("CAN Tx ERROR: Bad frame 0x{:03x},\n\t{}", id, e);
@@ -97,9 +91,7 @@ pub async fn output_sender(
         let frame = queue.receive().await;
 
         match with_timeout(TX_TIMEOUT, tx_bus.write(&frame)).await {
-            Ok(None) => {
-                trace!("CAN Tx: Sent, {}", &frame)
-            }
+            Ok(None) => {}
 
             // Make room for higher priority frames
             Ok(Some(frame)) => {
@@ -152,8 +144,8 @@ pub async fn input_processor(queue: DynamicReceiver<'static, Result<Frame, BusEr
     loop {
         match queue.receive().await {
             Ok(frame) => {
-                if let Some(msg) = try_msg_build(&frame) {
-                    trace!("CAN Rx: Built frame, 0x{:03x} {:02x}", msg.id, msg.payload)
+                if try_msg_build(&frame).is_some() {
+                    devices::forward_frame(&frame);
                 }
             }
 
@@ -168,21 +160,18 @@ pub fn log_bus_errs(props: &Properties) {
 
     match props.bus_error_mode() {
         BusErrorMode::ErrorActive => {
-            trace!(
-                "CAN Bus: ERROR active\n\t\t Errors: {} Rx, {} Tx",
-                rx_errs, tx_errs
-            );
+            println!("CAN Bus: ACTIVE\nErrors: {} Rx, {} Tx", rx_errs, tx_errs);
         }
 
         BusErrorMode::ErrorPassive => {
             warn!(
-                "CAN Bus: ERROR passive\n\t\t Errors: {} Rx, {} Tx",
+                "CAN Bus: ERROR passive\nErrors: {} Rx, {} Tx",
                 rx_errs, tx_errs
             );
         }
 
         BusErrorMode::BusOff => {
-            error!("CAN Bus: Off\n\t\t Errors: {} Rx, {} Tx", rx_errs, tx_errs);
+            error!("CAN Bus: Off\nErrors: {} Rx, {} Tx", rx_errs, tx_errs);
         }
     }
 }
