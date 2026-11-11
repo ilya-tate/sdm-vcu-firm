@@ -3,7 +3,8 @@
 ### Status
 
 - A custom PCB using the STM32-G4 is currently in development
-- CAN 2.0 test frames working, not yet tested with tranceivers
+- CAN 2.0 test frames working
+- Tested with motor controller, input communication working and decoded
 
 ### Documentation
 
