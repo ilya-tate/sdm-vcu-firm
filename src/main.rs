@@ -5,7 +5,7 @@ mod can;
 mod clocks;
 mod wdg;
 
-use defmt::{info, unwrap};
+use defmt::{info, trace, unwrap};
 use embassy_executor::Spawner;
 use embassy_stm32::can::OperatingMode;
 use embassy_stm32::wdg::IndependentWatchdog;
@@ -53,20 +53,39 @@ async fn main(spawner: Spawner) {
         can::channels::OUT.dyn_sender(),
     )));
 
-    Timer::after_secs(1).await;
-    info!("SDM VCU init done");
-
     // Reset if loop stalls
     let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
         IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
     wdg.unleash();
 
+    // Test frames
+    // Sent when "--release" is omitted from cargo run
+    #[cfg(debug_assertions)]
+    spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
+
+    info!("SDM VCU init done");
+
+    let mut sent_test: bool = false;
+    let mut tick: u32 = 0;
+    let mut log: u32 = 0;
+
     // Super loop
     loop {
-        #[cfg(debug_assertions)]
-        can::queue_msg(can::CAN_ID, &[1, 2, 3]); // Test case
-        can::log_bus_errs(&can_props);
         wdg.pet();
         Timer::after_secs(1).await;
+
+        // Error logger matches controller send rate
+        if tick.is_multiple_of(2) {
+            trace!("Log: {}", log);
+            log += 1;
+            can::log_bus_errs(&can_props);
+        }
+        tick = tick.wrapping_add(1);
+
+        can::devices::motor_controller::MotorController.clear_faults();
+        if !sent_test {
+            can::devices::motor_controller::MotorController.test_write();
+            sent_test = true;
+        }
     }
 }
