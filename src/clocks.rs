@@ -36,6 +36,7 @@ pub fn config() -> Config {
     });
     config.rcc.sys = Sysclk::HSE;
     config.rcc.mux.fdcansel = mux::Fdcansel::HSE;
+    config.rcc.mux.adc12sel = mux::Adcsel::SYS;
 
     config
 }

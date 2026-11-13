@@ -4,6 +4,7 @@
 
 - A custom PCB using the STM32-G4 is currently in development
 - Tested with motor controller, input communication working and decoded
+- Voltage readable via potentiometers
 
 ### Documentation
 

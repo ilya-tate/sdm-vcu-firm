@@ -5,8 +5,9 @@ mod can;
 mod clocks;
 mod wdg;
 
-use defmt::{info, trace, unwrap};
+use defmt::{info, println, trace, unwrap};
 use embassy_executor::Spawner;
+use embassy_stm32::adc::{Adc, SampleTime};
 use embassy_stm32::can::OperatingMode;
 use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::Timer;
@@ -23,7 +24,7 @@ const CAN_MODE: OperatingMode = OperatingMode::NormalOperationMode;
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     // Clock -> CAN timing calculated from can bus clock
-    let peripherals = embassy_stm32::init(clocks::config());
+    let mut peripherals = embassy_stm32::init(clocks::config());
 
     clocks::verify(&peripherals.RCC);
 
@@ -38,6 +39,7 @@ async fn main(spawner: Spawner) {
         Ok(can) => can,
         Err(e) => defmt::panic!("CAN Init Error: {}", e),
     };
+    let mut adc = Adc::new(peripherals.ADC1, Default::default());
 
     let (can_tx, can_rx, can_props) = can.split();
     spawner.spawn(unwrap!(can::input_listener(
@@ -73,6 +75,10 @@ async fn main(spawner: Spawner) {
     loop {
         wdg.pet();
         Timer::after_secs(1).await;
+
+        let adc_input = adc.blocking_read(&mut peripherals.PA0, SampleTime::CYCLES24_5);
+        let adc_voltage = adc_input as u32 * 3300 / 4095;
+        println!("Pedal: {} raw, {} V", adc_input, adc_voltage);
 
         // Error logger matches controller send rate
         if tick.is_multiple_of(2) {
