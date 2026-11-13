@@ -71,6 +71,7 @@ async fn main(spawner: Spawner) {
 
     MotorController.clear_faults();
     MotorController.read_config();
+    MotorController.send_stop_cmd();
 
     println!("SDM VCU init done");
 
@@ -92,6 +93,7 @@ async fn main(spawner: Spawner) {
             trace!("Log: {}", log);
             log += 1;
             can::log_bus_errs(&can_props);
+            MotorController.clear_faults();
         }
         tick = tick.wrapping_add(1);
     }
