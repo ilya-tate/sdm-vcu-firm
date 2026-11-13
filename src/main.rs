@@ -5,12 +5,15 @@ mod can;
 mod clocks;
 mod wdg;
 
-use defmt::{info, println, trace, unwrap};
+use crate::can::devices::motor_controller::MotorController;
+
+use defmt::{println, trace, unwrap};
 use embassy_executor::Spawner;
 use embassy_stm32::adc::{Adc, SampleTime};
 use embassy_stm32::can::OperatingMode;
 use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::Timer;
+
 use {defmt_rtt as _, panic_probe as _};
 
 // TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
@@ -65,9 +68,12 @@ async fn main(spawner: Spawner) {
     #[cfg(debug_assertions)]
     spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
 
-    info!("SDM VCU init done");
+    MotorController.clear_faults();
+    MotorController.read_config();
+    MotorController.send_stop_cmd();
 
-    let mut sent_test: bool = false;
+    println!("SDM VCU init done");
+
     let mut tick: u32 = 0;
     let mut log: u32 = 0;
 
@@ -85,13 +91,8 @@ async fn main(spawner: Spawner) {
             trace!("Log: {}", log);
             log += 1;
             can::log_bus_errs(&can_props);
+            MotorController.clear_faults();
         }
         tick = tick.wrapping_add(1);
-
-        can::devices::motor_controller::MotorController.clear_faults();
-        if !sent_test {
-            can::devices::motor_controller::MotorController.test_write();
-            sent_test = true;
-        }
     }
 }
