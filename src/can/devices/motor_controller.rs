@@ -6,11 +6,121 @@ use super::Device;
 use crate::can::get_frame_id;
 
 static IS_FIRMWARE_PRINTED: AtomicBool = AtomicBool::new(false);
+static IS_LOCKED_OUT: AtomicBool = AtomicBool::new(true);
+static HAS_FAULT: AtomicBool = AtomicBool::new(false);
 
 const CMD_ID: u16 = 0x0c0;
 const PARAM_ID: u16 = 0x0c1;
-const FAULT_CLEAR_PAYLOAD: [u8; 8] = [0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00];
-const TEST_PAYLOAD: [u8; 8] = [0x14, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00];
+
+// CMD WRITE STUFF
+
+#[derive(Clone, Copy)]
+enum Direction {
+    // Reverse disallowed by rules,
+    // otherweise would be 0x00
+    Forward = 0x01,
+}
+
+#[derive(Clone, Copy)]
+enum InverterMode {
+    Disable = 0x00,
+    Enable = 0x01,
+    Discharge = 0x02,
+    Speed = 0x04,
+}
+
+#[derive(Clone, Copy)]
+struct CmdPayload {
+    torque_cmd: u16,
+    speed_cmd: u16,
+    direction: Direction,
+    inverter_mode: InverterMode,
+    torque_limit: u16,
+}
+
+impl CmdPayload {
+    const fn encode(&self) -> [u8; 8] {
+        let torque_cmd = self.torque_cmd.to_le_bytes();
+        let speed_cmd = self.speed_cmd.to_le_bytes();
+        let torque_limit = self.torque_limit.to_le_bytes();
+
+        [
+            torque_cmd[0],
+            torque_cmd[1],
+            speed_cmd[0],
+            speed_cmd[1],
+            self.direction as u8,
+            self.inverter_mode as u8,
+            torque_limit[0],
+            torque_limit[1],
+        ]
+    }
+}
+
+// PARAM STUFF
+
+#[derive(Clone, Copy)]
+enum ParamAddr {
+    FaultClear = 0x14,
+    InverterRunMode = 0x8e,
+    InverterCmdMode = 0x8f,
+    CanCmdMsgActive = 0x92,
+    CanTimeout = 0xac,
+}
+
+#[derive(Clone, Copy)]
+enum ParamMode {
+    Read = 0x00,
+    Write = 0x01,
+}
+
+#[derive(Clone, Copy)]
+struct ParamPayload {
+    address: ParamAddr,
+    mode: ParamMode,
+    reserved_head: u8,
+    data: u16,
+    reserved_tail: u16,
+}
+
+impl ParamPayload {
+    const fn encode(&self) -> [u8; 8] {
+        let address = (self.address as u16).to_le_bytes();
+        let data = self.data.to_le_bytes();
+        let reserved_tail = self.reserved_tail.to_le_bytes();
+
+        [
+            address[0],
+            address[1],
+            self.mode as u8,
+            self.reserved_head,
+            data[0],
+            data[1],
+            reserved_tail[0],
+            reserved_tail[1],
+        ]
+    }
+
+    const fn read(address: ParamAddr) -> Self {
+        Self {
+            address,
+            mode: ParamMode::Read,
+            reserved_head: 0x00,
+            data: 0,
+            reserved_tail: 0,
+        }
+    }
+
+    const fn write(address: ParamAddr, data: u16) -> Self {
+        Self {
+            address,
+            mode: ParamMode::Write,
+            reserved_head: 0x00,
+            data,
+            reserved_tail: 0,
+        }
+    }
+}
 
 pub struct MotorController;
 
@@ -144,6 +254,8 @@ impl Device for MotorController {
                     return;
                 };
 
+                IS_LOCKED_OUT.store(enable_flags & 0x80 != 0, Ordering::Relaxed);
+
                 println!(
                     "VSM state: {}\nInverter state: {}\nInverter enabled: {}\nEnable lockout: {}\nDirection: {}",
                     vsm_state,
@@ -170,20 +282,24 @@ impl Device for MotorController {
                     return;
                 };
 
+                let post_faults = u32::from_le_bytes([
+                    post_fault_lo_p0,
+                    post_fault_lo_p1,
+                    post_fault_hi_p0,
+                    post_fault_hi_p1,
+                ]);
+                let run_faults = u32::from_le_bytes([
+                    run_fault_lo_p0,
+                    run_fault_lo_p1,
+                    run_fault_hi_p0,
+                    run_fault_hi_p1,
+                ]);
+
+                HAS_FAULT.store(post_faults != 0 || run_faults != 0, Ordering::Relaxed);
+
                 println!(
                     "POST faults: 0x{:08x}\nRun faults: 0x{:08x}",
-                    u32::from_le_bytes([
-                        post_fault_lo_p0,
-                        post_fault_lo_p1,
-                        post_fault_hi_p0,
-                        post_fault_hi_p1
-                    ]),
-                    u32::from_le_bytes([
-                        run_fault_lo_p0,
-                        run_fault_lo_p1,
-                        run_fault_hi_p0,
-                        run_fault_hi_p1
-                    ])
+                    post_faults, run_faults
                 );
             }
             // Torque timer
@@ -227,20 +343,138 @@ impl Device for MotorController {
             0x0af => {}
             // High speed
             0x0b0 => {}
+            // Command req
+            0x0c0 => {
+                let &[
+                    torque_cmd_p0,
+                    torque_cmd_p1,
+                    speed_cmd_p0,
+                    speed_cmd_p1,
+                    direction,
+                    inverter_mode,
+                    torque_limit_p0,
+                    torque_limit_p1,
+                ] = frame.data()
+                else {
+                    warn!("Motor Controller: Incomplete cmd payload");
+                    return;
+                };
+
+                println!(
+                    "Torque cmd: {}\nSpeed cmd: {}\nDirection: {}\nInverter mode: 0x{:02x}\nTorque limit: {}",
+                    u16::from_le_bytes([torque_cmd_p0, torque_cmd_p1]),
+                    u16::from_le_bytes([speed_cmd_p0, speed_cmd_p1]),
+                    direction,
+                    inverter_mode,
+                    u16::from_le_bytes([torque_limit_p0, torque_limit_p1])
+                );
+            }
+            // Param req
+            0x0c1 => {
+                let &[address_p0, address_p1, mode, _, data_p0, data_p1, _, _] = frame.data()
+                else {
+                    warn!("Motor Controller: Incomplete param payload");
+                    return;
+                };
+
+                println!(
+                    "Param req: 0x{:02x}\nMode: {}\nData: {}",
+                    u16::from_le_bytes([address_p0, address_p1]),
+                    mode,
+                    u16::from_le_bytes([data_p0, data_p1])
+                );
+            }
             // Param res
-            0x0c2 => {}
+            0x0c2 => {
+                let &[
+                    address_p0,
+                    address_p1,
+                    write_success,
+                    _,
+                    data_p0,
+                    data_p1,
+                    _,
+                    _,
+                ] = frame.data()
+                else {
+                    warn!("Motor Controller: Incomplete param response payload");
+                    return;
+                };
+
+                println!(
+                    "Param res: 0x{:02x}\nWrite success: {}\nData: {}",
+                    u16::from_le_bytes([address_p0, address_p1]),
+                    write_success != 0,
+                    u16::from_le_bytes([data_p0, data_p1])
+                );
+            }
 
             _ => {}
         }
     }
 }
 
+const FAULT_CLEAR: ParamPayload = ParamPayload::write(ParamAddr::FaultClear, 0);
+
+const START: CmdPayload = CmdPayload {
+    torque_cmd: 0,
+    speed_cmd: 0,
+    direction: Direction::Forward,
+    inverter_mode: InverterMode::Enable,
+    torque_limit: 0,
+};
+
+const STOP: CmdPayload = CmdPayload {
+    torque_cmd: 0,
+    speed_cmd: 0,
+    direction: Direction::Forward,
+    inverter_mode: InverterMode::Disable,
+    torque_limit: 0,
+};
+
 impl MotorController {
+    // Params
+
     pub fn clear_faults(&self) {
-        self.write(PARAM_ID, &FAULT_CLEAR_PAYLOAD);
+        self.write(PARAM_ID, &FAULT_CLEAR.encode());
     }
 
-    pub fn test_write(&self) {
-        self.write(CMD_ID, &TEST_PAYLOAD);
+    pub fn read_config(&self) {
+        use ParamAddr::{CanCmdMsgActive, CanTimeout, InverterCmdMode, InverterRunMode};
+        const CONFIG_CHECKS: [ParamAddr; 4] = [
+            InverterRunMode,
+            InverterCmdMode,
+            CanCmdMsgActive,
+            CanTimeout,
+        ];
+
+        for address in CONFIG_CHECKS {
+            self.write(PARAM_ID, &ParamPayload::read(address).encode());
+        }
+    }
+
+    // Cmds
+    pub fn send_start_cmd(&self) {
+        self.write(CMD_ID, &START.encode());
+    }
+
+    pub fn send_stop_cmd(&self) {
+        self.write(CMD_ID, &STOP.encode());
+    }
+
+    pub fn send_torque_cmd(&self, torque: u16) {
+        // TODO: Add checks for direction, inverter mode,  and faults
+        let payload = CmdPayload {
+            torque_cmd: torque,
+            speed_cmd: 0,
+            direction: Direction::Forward,
+            inverter_mode: InverterMode::Enable,
+            torque_limit: 0,
+        };
+        self.write(CMD_ID, &payload.encode());
+    }
+
+    pub fn is_ready(&self) -> bool {
+        !IS_LOCKED_OUT.load(Ordering::Relaxed) && !HAS_FAULT.load(Ordering::Relaxed)
     }
 }

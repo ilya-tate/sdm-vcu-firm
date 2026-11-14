@@ -3,6 +3,7 @@
 
 mod can;
 mod clocks;
+mod pedals;
 mod wdg;
 
 use crate::can::devices::motor_controller::MotorController;
@@ -12,7 +13,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::adc::{Adc, SampleTime};
 use embassy_stm32::can::OperatingMode;
 use embassy_stm32::wdg::IndependentWatchdog;
-use embassy_time::Timer;
+use embassy_time::{Duration, Ticker};
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -74,24 +75,42 @@ async fn main(spawner: Spawner) {
 
     println!("SDM VCU init done");
 
+    let mut ticker = Ticker::every(Duration::from_millis(10));
     let mut tick: u32 = 0;
     let mut log: u32 = 0;
+
+    let _ = adc.blocking_read(&mut peripherals.PA0, SampleTime::CYCLES24_5);
 
     // Super loop
     loop {
         wdg.pet();
-        Timer::after_secs(1).await;
+        ticker.next().await;
 
         let adc_input = adc.blocking_read(&mut peripherals.PA0, SampleTime::CYCLES24_5);
-        let adc_voltage = adc_input as u32 * 3300 / 4095;
-        println!("Pedal: {} raw, {} V", adc_input, adc_voltage);
+        let torque = pedals::APPS1.percent(adc_input).map_or(0, pedals::torque);
+
+        if MotorController.is_ready() {
+            MotorController.send_torque_cmd(torque);
+        } else {
+            MotorController.send_stop_cmd();
+        }
+
+        if tick.is_multiple_of(100) {
+            let adc_voltage = adc_input as u32 * 3300 / 4095;
+            println!(
+                "Pedal: {} raw, {} mV, {} torque",
+                adc_input, adc_voltage, torque
+            );
+        }
 
         // Error logger matches controller send rate
-        if tick.is_multiple_of(2) {
+        if tick.is_multiple_of(200) {
             trace!("Log: {}", log);
             log += 1;
             can::log_bus_errs(&can_props);
-            MotorController.clear_faults();
+            if torque == 0 {
+                MotorController.clear_faults();
+            }
         }
         tick = tick.wrapping_add(1);
     }
