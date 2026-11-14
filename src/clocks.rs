@@ -15,12 +15,10 @@ const HSE_CLK_MAX: Hertz = mhz(48);
 const SYS_CLK_MAX: Hertz = mhz(170);
 const CAN_CLK_MAX: Hertz = mhz(80);
 
-/*
-* Ensures follow max clock speeds,
-* "const _" sets at compile rather than runtime.
-* ".0" compares them as u32 instead of as a Hertz.
-* This all happens at compile => slower build, but faster runtime.
-*/
+// Ensures follow max clock speeds,
+// "const _" sets at compile rather than runtime.
+// ".0" compares them as u32 instead of as a Hertz.
+// This all happens at compile => slower build, but faster runtime.
 const _: () = assert!(HSE_CLK.0 >= HSE_CLK_MIN.0);
 const _: () = assert!(HSE_CLK.0 <= HSE_CLK_MAX.0);
 const _: () = assert!(SYS_CLK.0 <= SYS_CLK_MAX.0);
