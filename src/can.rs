@@ -1,4 +1,3 @@
-pub mod channels;
 pub mod devices;
 pub mod init;
 #[cfg(debug_assertions)]
@@ -9,13 +8,21 @@ use embassy_stm32::can::{
     CanRx, CanTx, Frame, Properties,
     enums::{BusError, BusErrorMode},
 };
-use embassy_sync::channel::{DynamicReceiver, DynamicSender};
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
 use embassy_time::{Duration, TimeoutError, with_timeout};
 use embedded_can::Id;
 
 // TODO: Store error messages separately
 
 const TX_TIMEOUT: Duration = Duration::from_millis(5);
+
+// Max messages that can be queued at once per queue
+const CHANNEL_CAPACITY: usize = 16;
+
+pub static RX_QUEUE: Channel<ThreadModeRawMutex, Result<Frame, BusError>, CHANNEL_CAPACITY> =
+    Channel::new();
+pub static TX_QUEUE: Channel<ThreadModeRawMutex, Frame, CHANNEL_CAPACITY> = Channel::new();
 
 // Copies of frame from build
 struct Msg<'a> {
@@ -36,7 +43,7 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
         return false;
     };
 
-    match channels::OUT.try_send(frame) {
+    match TX_QUEUE.try_send(frame) {
         Ok(()) => true,
 
         Err(_) => {

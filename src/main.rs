@@ -48,15 +48,13 @@ async fn main(spawner: Spawner) {
     let (can_tx, can_rx, can_props) = can.split();
     spawner.spawn(unwrap!(can::input_listener(
         can_rx,
-        can::channels::IN.dyn_sender(),
+        can::RX_QUEUE.dyn_sender(),
     )));
-    spawner.spawn(unwrap!(can::input_processor(
-        can::channels::IN.dyn_receiver()
-    )));
+    spawner.spawn(unwrap!(can::input_processor(can::RX_QUEUE.dyn_receiver())));
     spawner.spawn(unwrap!(can::output_sender(
         can_tx,
-        can::channels::OUT.dyn_receiver(),
-        can::channels::OUT.dyn_sender(),
+        can::TX_QUEUE.dyn_receiver(),
+        can::TX_QUEUE.dyn_sender(),
     )));
 
     // Reset if loop stalls
