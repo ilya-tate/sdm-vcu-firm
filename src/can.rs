@@ -22,12 +22,6 @@ pub static RX_QUEUE: Channel<ThreadModeRawMutex, Result<Frame, BusError>, CHANNE
     Channel::new();
 pub static TX_QUEUE: Channel<ThreadModeRawMutex, Frame, CHANNEL_CAPACITY> = Channel::new();
 
-// Copies of frame from build
-struct Msg<'a> {
-    id: u32,
-    payload: &'a [u8],
-}
-
 // To allow canFD frames to be logged later
 fn get_frame_id(frame: &Frame) -> u32 {
     match frame.id() {
@@ -65,25 +59,28 @@ fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     }
 }
 
-fn try_msg_build(frame: &Frame) -> Option<Msg<'_>> {
-    // Get frame id if not FD
+fn is_valid_frame(frame: &Frame) -> bool {
+    // Ensure standard 2.0 frame
     if matches!(frame.id(), Id::Extended(_)) {
         warn!(
             "CAN Rx: Ignored 0x{:08x}, canFD not supported",
             get_frame_id(frame)
         );
-        return None;
+
+        return false;
     }
-    let id: u32 = get_frame_id(frame);
 
     // No payload -> Ignore frame
     if frame.header().rtr() {
-        warn!("CAN Rx: Ignored 0x{:03x}, does not contain payload", id);
-        return None;
-    }
-    let payload = frame.data();
+        warn!(
+            "CAN Rx: Ignored 0x{:03x}, does not contain payload",
+            get_frame_id(frame)
+        );
 
-    Some(Msg { id, payload })
+        return false;
+    }
+
+    return true;
 }
 
 #[embassy_executor::task]
@@ -149,7 +146,7 @@ pub async fn input_processor(queue: DynamicReceiver<'static, Result<Frame, BusEr
     loop {
         match queue.receive().await {
             Ok(frame) => {
-                if try_msg_build(&frame).is_some() {
+                if is_valid_frame(&frame) {
                     devices::forward_frame(&frame);
                 }
             }
