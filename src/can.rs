@@ -1,7 +1,5 @@
 pub mod devices;
 pub mod init;
-#[cfg(debug_assertions)]
-pub mod test_frames;
 
 use defmt::{error, println, warn};
 use embassy_stm32::can::{

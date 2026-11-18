@@ -62,11 +62,6 @@ async fn main(spawner: Spawner) {
         IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
     wdg.unleash();
 
-    // Test frames
-    // Sent when "--release" is omitted from cargo run
-    #[cfg(debug_assertions)]
-    spawner.spawn(unwrap!(can::test_frames::send_test_frames()));
-
     MotorController.clear_faults();
     MotorController.read_config();
     MotorController.send_stop_cmd();
