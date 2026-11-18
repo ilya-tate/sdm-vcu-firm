@@ -1,0 +1,84 @@
+use defmt::{println, unwrap};
+use embassy_executor::Spawner;
+use embassy_stm32::Peri;
+use embassy_stm32::adc::{Adc, SampleTime};
+use embassy_stm32::can::{OperatingMode, Properties};
+use embassy_stm32::peripherals::{ADC1, IWDG, PA0};
+use embassy_stm32::wdg::IndependentWatchdog;
+use embassy_time::{Duration, Ticker};
+
+use crate::can::devices::motor_controller::MotorController;
+use crate::{can, clocks, wdg};
+
+// TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
+const WDG_TIMEOUT_US: u32 = 2_000_000;
+
+#[cfg(debug_assertions)]
+const CAN_MODE: OperatingMode = OperatingMode::InternalLoopbackMode;
+#[cfg(not(debug_assertions))]
+const CAN_MODE: OperatingMode = OperatingMode::NormalOperationMode;
+
+pub struct Resources {
+    pub adc: Adc<'static, ADC1>,
+    pub pedal_pin: Peri<'static, PA0>,
+    pub wdg: IndependentWatchdog<'static, IWDG>,
+    pub can_props: Properties,
+    pub ticker: Ticker,
+}
+
+pub fn setup(spawner: Spawner) -> Resources {
+    // Clock -> CAN timing calculated from can bus clock
+    let mut peripherals = embassy_stm32::init(clocks::config());
+
+    clocks::verify(&peripherals.RCC);
+
+    wdg::check_reset();
+
+    let can = match can::init::can_init(
+        peripherals.FDCAN1,
+        peripherals.PA11,
+        peripherals.PA12,
+        CAN_MODE,
+    ) {
+        Ok(can) => can,
+        Err(e) => defmt::panic!("CAN Init Error: {}", e),
+    };
+    let mut adc = Adc::new(peripherals.ADC1, Default::default());
+
+    let (can_tx, can_rx, can_props) = can.split();
+    spawner.spawn(unwrap!(can::tasks::input_listener(
+        can_rx,
+        can::RX_QUEUE.dyn_sender(),
+    )));
+    spawner.spawn(unwrap!(can::tasks::input_processor(
+        can::RX_QUEUE.dyn_receiver()
+    )));
+    spawner.spawn(unwrap!(can::tasks::output_sender(
+        can_tx,
+        can::TX_QUEUE.dyn_receiver(),
+        can::TX_QUEUE.dyn_sender(),
+    )));
+
+    // Reset if loop stalls
+    let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
+        IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
+    wdg.unleash();
+
+    MotorController.clear_faults();
+    MotorController.read_config();
+    MotorController.send_stop_cmd();
+
+    println!("SDM VCU init done");
+
+    let ticker = Ticker::every(Duration::from_millis(10));
+
+    let _ = adc.blocking_read(&mut peripherals.PA0, SampleTime::CYCLES24_5);
+
+    Resources {
+        adc,
+        pedal_pin: peripherals.PA0,
+        wdg,
+        can_props,
+        ticker,
+    }
+}

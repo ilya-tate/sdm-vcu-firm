@@ -3,85 +3,36 @@
 
 mod can;
 mod clocks;
+mod init;
 mod pedals;
 mod wdg;
 
 use crate::can::devices::motor_controller::MotorController;
 
-use defmt::{println, trace, unwrap};
+use defmt::{println, trace};
 use embassy_executor::Spawner;
-use embassy_stm32::adc::{Adc, SampleTime};
-use embassy_stm32::can::OperatingMode;
-use embassy_stm32::wdg::IndependentWatchdog;
-use embassy_time::{Duration, Ticker};
+use embassy_stm32::adc::SampleTime;
 
 use {defmt_rtt as _, panic_probe as _};
 
-// TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
-const WDG_TIMEOUT_US: u32 = 2_000_000;
-
-#[cfg(debug_assertions)]
-const CAN_MODE: OperatingMode = OperatingMode::InternalLoopbackMode;
-#[cfg(not(debug_assertions))]
-const CAN_MODE: OperatingMode = OperatingMode::NormalOperationMode;
-
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    // Clock -> CAN timing calculated from can bus clock
-    let mut peripherals = embassy_stm32::init(clocks::config());
-
-    clocks::verify(&peripherals.RCC);
-
-    wdg::check_reset();
-
-    let can = match can::init::can_init(
-        peripherals.FDCAN1,
-        peripherals.PA11,
-        peripherals.PA12,
-        CAN_MODE,
-    ) {
-        Ok(can) => can,
-        Err(e) => defmt::panic!("CAN Init Error: {}", e),
-    };
-    let mut adc = Adc::new(peripherals.ADC1, Default::default());
-
-    let (can_tx, can_rx, can_props) = can.split();
-    spawner.spawn(unwrap!(can::tasks::input_listener(
-        can_rx,
-        can::RX_QUEUE.dyn_sender(),
-    )));
-    spawner.spawn(unwrap!(can::tasks::input_processor(
-        can::RX_QUEUE.dyn_receiver()
-    )));
-    spawner.spawn(unwrap!(can::tasks::output_sender(
-        can_tx,
-        can::TX_QUEUE.dyn_receiver(),
-        can::TX_QUEUE.dyn_sender(),
-    )));
-
-    // Reset if loop stalls
-    let mut wdg: IndependentWatchdog<'_, embassy_stm32::peripherals::IWDG> =
-        IndependentWatchdog::new(peripherals.IWDG, WDG_TIMEOUT_US);
-    wdg.unleash();
-
-    MotorController.clear_faults();
-    MotorController.read_config();
-    MotorController.send_stop_cmd();
-
-    println!("SDM VCU init done");
-
-    let mut ticker = Ticker::every(Duration::from_millis(10));
+    let init::Resources {
+        mut adc,
+        mut pedal_pin,
+        mut wdg,
+        can_props,
+        mut ticker,
+    } = init::setup(spawner);
     let mut tick: u32 = 0;
     let mut log: u32 = 0;
-
-    let _ = adc.blocking_read(&mut peripherals.PA0, SampleTime::CYCLES24_5);
 
     // Super loop
     loop {
         wdg.pet();
         ticker.next().await;
 
-        let adc_input = adc.blocking_read(&mut peripherals.PA0, SampleTime::CYCLES24_5);
+        let adc_input = adc.blocking_read(&mut pedal_pin, SampleTime::CYCLES24_5);
         let torque = pedals::APPS1.percent(adc_input).map_or(0, pedals::torque);
 
         if MotorController.is_ready() {
