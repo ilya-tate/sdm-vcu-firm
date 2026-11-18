@@ -9,17 +9,15 @@ mod wdg;
 
 use crate::can::devices::motor_controller::MotorController;
 
+use core::sync::atomic::Ordering;
 use defmt::{println, trace};
 use embassy_executor::Spawner;
-use embassy_stm32::adc::SampleTime;
 
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let init::Resources {
-        mut adc,
-        mut pedal_pin,
         mut wdg,
         can_props,
         mut ticker,
@@ -32,21 +30,12 @@ async fn main(spawner: Spawner) {
         wdg.pet();
         ticker.next().await;
 
-        let adc_input = adc.blocking_read(&mut pedal_pin, SampleTime::CYCLES24_5);
-        let torque = pedals::APPS1.percent(adc_input).map_or(0, pedals::torque);
-
-        if MotorController.is_ready() {
-            MotorController.send_torque_cmd(torque);
-        } else {
-            MotorController.send_stop_cmd();
-        }
+        // Constantly read and send torque to motor
+        let torque = pedals::TORQUE.load(Ordering::Relaxed);
+        MotorController.send_torque_cmd(torque);
 
         if tick.is_multiple_of(100) {
-            let adc_voltage = adc_input as u32 * 3300 / 4095;
-            println!(
-                "Pedal: {} raw, {} mV, {} torque",
-                adc_input, adc_voltage, torque
-            );
+            println!("Torque: {}", torque);
         }
 
         // Error logger matches controller send rate

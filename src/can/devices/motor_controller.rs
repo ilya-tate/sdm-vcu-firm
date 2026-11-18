@@ -463,6 +463,11 @@ impl MotorController {
     }
 
     pub fn send_torque_cmd(&self, torque: u16) {
+        if !self.is_ready() {
+            self.send_stop_cmd();
+            return;
+        }
+
         // TODO: Add checks for direction, inverter mode,  and faults
         let payload = CmdPayload {
             torque_cmd: torque,
