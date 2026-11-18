@@ -1,19 +1,17 @@
 pub mod devices;
 pub mod init;
+pub mod tasks;
 
 use defmt::{error, println, warn};
 use embassy_stm32::can::{
-    CanRx, CanTx, Frame, Properties,
+    Frame, Properties,
     enums::{BusError, BusErrorMode},
 };
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
-use embassy_time::{Duration, TimeoutError, with_timeout};
+use embassy_sync::channel::Channel;
 use embedded_can::Id;
 
 // TODO: Store error messages separately
-
-const TX_TIMEOUT: Duration = Duration::from_millis(5);
 
 // Max messages that can be queued at once per queue
 const CHANNEL_CAPACITY: usize = 16;
@@ -81,79 +79,6 @@ fn is_valid_frame(frame: &Frame) -> bool {
     }
 
     return true;
-}
-
-#[embassy_executor::task]
-pub async fn output_sender(
-    mut tx_bus: CanTx<'static>,
-    queue: DynamicReceiver<'static, Frame>,
-    requeue: DynamicSender<'static, Frame>,
-) -> ! {
-    loop {
-        let frame = queue.receive().await;
-
-        match with_timeout(TX_TIMEOUT, tx_bus.write(&frame)).await {
-            Ok(None) => {}
-
-            // Make room for higher priority frames
-            Ok(Some(frame)) => {
-                if requeue.try_send(frame).is_err() {
-                    warn!(
-                        "CAN Tx ERROR: Queue full, dropping 0x{:03x}",
-                        get_frame_id(&frame)
-                    );
-                }
-            }
-
-            Err(TimeoutError) => warn!(
-                "CAN Tx ERROR: Timeout, dropping 0x{:03x}",
-                get_frame_id(&frame)
-            ),
-        }
-    }
-}
-
-#[embassy_executor::task]
-pub async fn input_listener(
-    mut rx_bus: CanRx<'static>,
-    queue: DynamicSender<'static, Result<Frame, BusError>>,
-) -> ! {
-    loop {
-        match rx_bus.read().await {
-            Ok(envelope) => {
-                let frame = envelope.frame;
-                if queue.try_send(Ok(frame)).is_err() {
-                    warn!(
-                        "CAN Rx ERROR: Queue full, dropping 0x{:03x}",
-                        get_frame_id(&frame)
-                    );
-                }
-            }
-
-            Err(e) => {
-                warn!("Can Rx: Error, {}", e);
-                // Skip errors to maintian frame priority
-                let _ = queue.try_send(Err(e));
-                // Stops instantly repeating errors
-                //Timer::after_millis(10).await;
-            }
-        }
-    }
-}
-
-#[embassy_executor::task]
-pub async fn input_processor(queue: DynamicReceiver<'static, Result<Frame, BusError>>) -> ! {
-    loop {
-        match queue.receive().await {
-            Ok(frame) => {
-                if is_valid_frame(&frame) {
-                    devices::forward_frame(&frame);
-                }
-            }
-
-            Err(e) => warn!("CAN Rx ERROR: Bus error, {}", e),
-        }
-    }
 }
 
 pub fn log_bus_errs(props: &Properties) {

@@ -46,12 +46,14 @@ async fn main(spawner: Spawner) {
     let mut adc = Adc::new(peripherals.ADC1, Default::default());
 
     let (can_tx, can_rx, can_props) = can.split();
-    spawner.spawn(unwrap!(can::input_listener(
+    spawner.spawn(unwrap!(can::tasks::input_listener(
         can_rx,
         can::RX_QUEUE.dyn_sender(),
     )));
-    spawner.spawn(unwrap!(can::input_processor(can::RX_QUEUE.dyn_receiver())));
-    spawner.spawn(unwrap!(can::output_sender(
+    spawner.spawn(unwrap!(can::tasks::input_processor(
+        can::RX_QUEUE.dyn_receiver()
+    )));
+    spawner.spawn(unwrap!(can::tasks::output_sender(
         can_tx,
         can::TX_QUEUE.dyn_receiver(),
         can::TX_QUEUE.dyn_sender(),
