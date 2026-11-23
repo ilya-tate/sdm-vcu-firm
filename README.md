@@ -19,8 +19,6 @@
 - Dev Board: [NUCLEO-G474RE](https://www.st.com/en/evaluation-tools/nucleo-g474re.html)
 - Microcontroller Family: [STM32G4](https://www.st.com/en/microcontrollers-microprocessors/stm32g4-series.html)
 - Dev Board Microcontroller: [STM32G474RE](https://www.st.com/en/microcontrollers-microprocessors/stm32g474re.html)
-<<<<<<< Updated upstream
-=======
 
 ### Pinout
 
@@ -54,4 +52,3 @@
 | CN8-1     | Pedals          | APPS1    |
 | CN8-2     | Pedals          | APPS2    |
 | CN8-4     | Pedals          | Brake    |
->>>>>>> Stashed changes
