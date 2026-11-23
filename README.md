@@ -40,3 +40,15 @@
 | CAN Timeout                | 0xac    | Nonzero         |
 | CAN Bit Rate               |         | 500 kbps        |
 | CAN ID Offset              |         | 0x0a0 (default) |
+
+### Wriing Directory
+
+| Board Pin | Device          | Location |
+| --------- | --------------  | -------- |
+| CN7-16    | Can transceiver | Vcc      |
+| CN7-20    | Can transceiver | Gnd      |
+| CN10-14   | Can transceiver | Rx       |
+| CN10-16   | Can transceiver | Tx       |
+| CN8-1     | Pedals          | APPS1    |
+| CN8-2     | Pedals          | APPS2    |
+| CN8-4     | Pedals          | Brake    |
