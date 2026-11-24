@@ -39,19 +39,19 @@ pub struct PedalSensor {
     deadzone: u16,
 }
 
-const APPS1: PedalSensor = PedalSensor {
+pub const APPS1: PedalSensor = PedalSensor {
     min: 150,
     max: 3900,
     deadzone: 50,
 };
 
-const APPS2: PedalSensor = PedalSensor {
+pub const APPS2: PedalSensor = PedalSensor {
     min: 150,
     max: 3900,
     deadzone: 50,
 };
 
-const BRAKE: PedalSensor = PedalSensor {
+pub const BRAKE: PedalSensor = PedalSensor {
     min: 150,
     max: 3900,
     deadzone: 50,
@@ -80,11 +80,11 @@ impl PedalSensor {
     }
 }
 
-const fn torque(percent: u8) -> u16 {
+pub const fn torque(percent: u8) -> u16 {
     (percent as u32 * MAX_TORQUE as u32 / 100) as u16
 }
 
-fn check_apps_plaus(apps1: u8, apps2: u8, fault_at: &mut Option<Instant>) -> bool {
+pub fn check_apps_plaus(apps1: u8, apps2: u8, fault_at: &mut Option<Instant>) -> bool {
     // Ensure both APPS sensors are reading similarly
     if apps1.abs_diff(apps2) <= APPS_DIFF_THRESH {
         *fault_at = None;
@@ -94,7 +94,7 @@ fn check_apps_plaus(apps1: u8, apps2: u8, fault_at: &mut Option<Instant>) -> boo
     fault_at.get_or_insert_with(Instant::now).elapsed() < APPS_FAULT_TIME
 }
 
-const fn check_brake_fault(is_fault: bool, throttle: u8, brake: u8) -> bool {
+pub const fn check_brake_fault(is_fault: bool, throttle: u8, brake: u8) -> bool {
     if brake >= BRAKE_THRESH && throttle > BRAKE_PLAUS_THRESH {
         return true;
     } else if throttle < BRAKE_PLAUS_RESET_THRESH {

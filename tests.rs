@@ -18,7 +18,7 @@ use sdm_vcu_firm::can::devices::motor_controller::MotorController;
 use sdm_vcu_firm::can::{
     self, RX_QUEUE, TX_QUEUE, devices, get_frame_id, is_valid_frame, queue_msg, try_frame_build,
 };
-use sdm_vcu_firm::pedals::{APPS1, torque};
+use sdm_vcu_firm::pedals::{APPS1, APPS2, BRAKE, check_apps_plaus, check_brake_fault, torque};
 use sdm_vcu_firm::{clocks, init, wdg};
 
 const STATES_ID: u16 = 0x0aa;
@@ -402,6 +402,13 @@ mod send_torque_cmd {
     use super::*;
 
     #[test]
+    fn sends_stop_when_not_ready() {
+        MotorController.send_torque_cmd(500);
+        check_tx(CMD_ID, STOP);
+        check_tx_empty();
+    }
+
+    #[test]
     fn sends_torque() {
         ready_motor_controller();
         MotorController.send_torque_cmd(500);
@@ -457,6 +464,8 @@ mod pedal_percent {
         assert_eq!(APPS1.percent(237), Some(1));
         assert_eq!(APPS1.percent(2049), Some(49));
         assert_eq!(APPS1.percent(2050), Some(50));
+        assert_eq!(APPS2.percent(2050), Some(50));
+        assert_eq!(BRAKE.percent(2050), Some(50));
         assert_eq!(APPS1.percent(3899), Some(99));
     }
 
@@ -497,6 +506,89 @@ mod pedal_torque {
         for raw in 0..=u16::MAX {
             assert!(APPS1.percent(raw).map_or(0, torque) <= 1000);
         }
+    }
+}
+
+#[embedded_test::tests]
+mod brake_fault {
+    use super::*;
+
+    #[test]
+    fn sets_on_brake_and_throttle() {
+        assert!(check_brake_fault(false, 26, 10));
+    }
+
+    #[test]
+    fn needs_throttle_over_thresh() {
+        assert!(!check_brake_fault(false, 25, 10));
+    }
+
+    #[test]
+    fn needs_brake_at_thresh() {
+        assert!(!check_brake_fault(false, 26, 9));
+    }
+
+    #[test]
+    fn holds_until_throttle_released() {
+        assert!(check_brake_fault(true, 5, 0));
+        assert!(check_brake_fault(true, 30, 0));
+    }
+
+    #[test]
+    fn resets_under_reset_thresh() {
+        assert!(!check_brake_fault(true, 4, 0));
+        assert!(!check_brake_fault(true, 4, 100));
+    }
+}
+
+#[embedded_test::tests]
+mod apps_plaus {
+    use super::*;
+
+    #[test]
+    fn accepts_matching_sensors() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        assert!(check_apps_plaus(40, 50, &mut fault_at));
+        assert!(fault_at.is_none());
+    }
+
+    #[test]
+    fn starts_timer_on_mismatch() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        assert!(check_apps_plaus(40, 51, &mut fault_at));
+        assert!(fault_at.is_some());
+    }
+
+    #[test]
+    fn allows_mismatch_under_fault_time() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        check_apps_plaus(0, 50, &mut fault_at);
+        block_for(Duration::from_millis(50));
+        assert!(check_apps_plaus(0, 50, &mut fault_at));
+    }
+
+    #[test]
+    fn rejects_mismatch_past_fault_time() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        check_apps_plaus(0, 50, &mut fault_at);
+        block_for(Duration::from_millis(110));
+        assert!(!check_apps_plaus(0, 50, &mut fault_at));
+    }
+
+    #[test]
+    fn recovers_and_resets_timer() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        check_apps_plaus(0, 50, &mut fault_at);
+        block_for(Duration::from_millis(110));
+        assert!(!check_apps_plaus(0, 50, &mut fault_at));
+        assert!(check_apps_plaus(50, 50, &mut fault_at));
+        assert!(fault_at.is_none());
+        assert!(check_apps_plaus(0, 50, &mut fault_at));
     }
 }
 
