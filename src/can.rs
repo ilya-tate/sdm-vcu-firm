@@ -21,7 +21,7 @@ pub static RX_QUEUE: Channel<ThreadModeRawMutex, Result<Frame, BusError>, CHANNE
 pub static TX_QUEUE: Channel<ThreadModeRawMutex, Frame, CHANNEL_CAPACITY> = Channel::new();
 
 // To allow canFD frames to be logged later
-fn get_frame_id(frame: &Frame) -> u32 {
+pub fn get_frame_id(frame: &Frame) -> u32 {
     match frame.id() {
         Id::Standard(id) => id.as_raw().into(),
         Id::Extended(id) => id.as_raw(),
@@ -46,7 +46,7 @@ pub fn queue_msg(id: u16, payload: &[u8]) -> bool {
     }
 }
 
-fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
+pub fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     match Frame::new_standard(id, payload) {
         Ok(frame) => Some(frame),
 
@@ -57,7 +57,7 @@ fn try_frame_build(id: u16, payload: &[u8]) -> Option<Frame> {
     }
 }
 
-fn is_valid_frame(frame: &Frame) -> bool {
+pub fn is_valid_frame(frame: &Frame) -> bool {
     // Ensure standard 2.0 frame
     if matches!(frame.id(), Id::Extended(_)) {
         warn!(
