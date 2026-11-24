@@ -19,7 +19,7 @@ use sdm_vcu_firm::can::{
     self, RX_QUEUE, TX_QUEUE, devices, get_frame_id, is_valid_frame, queue_msg, try_frame_build,
 };
 use sdm_vcu_firm::pedals::{APPS1, torque};
-use sdm_vcu_firm::{clocks, init, wdg};
+use sdm_vcu_firm::{clocks, init};
 
 const STATES_ID: u16 = 0x0aa;
 const FAULTS_ID: u16 = 0x0ab;
@@ -704,7 +704,7 @@ mod on_board {
         let csr = RCC.csr().read();
         assert!(csr.pinrstf() || csr.sftrstf());
 
-        wdg::check_reset();
+        init::check_reset();
         block_for(Duration::from_millis(1));
 
         let csr = RCC.csr().read();

@@ -5,7 +5,6 @@ mod can;
 mod clocks;
 mod init;
 mod pedals;
-mod wdg;
 
 use crate::can::devices::motor_controller::MotorController;
 

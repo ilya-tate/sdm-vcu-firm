@@ -1,14 +1,15 @@
-use defmt::{println, unwrap};
+use defmt::{error, info, println, unwrap};
 use embassy_executor::Spawner;
 use embassy_stm32::Peri;
 use embassy_stm32::adc::{Adc, SampleTime};
 use embassy_stm32::can::{OperatingMode, Properties};
+use embassy_stm32::pac::RCC;
 use embassy_stm32::peripherals::{ADC1, IWDG, PA0};
 use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::{Duration, Ticker};
 
 use crate::can::devices::motor_controller::MotorController;
-use crate::{can, clocks, wdg};
+use crate::{can, clocks};
 
 // TIMEOUT MUST OUTLAST EXPECTED LOOP ITERATION TIME
 const WDG_TIMEOUT_US: u32 = 2_000_000;
@@ -32,7 +33,7 @@ pub fn setup(spawner: Spawner) -> Resources {
 
     clocks::verify(&peripherals.RCC);
 
-    wdg::check_reset();
+    check_reset();
 
     let can = match can::init::can_init(
         peripherals.FDCAN1,
@@ -81,4 +82,31 @@ pub fn setup(spawner: Spawner) -> Resources {
         can_props,
         ticker,
     }
+}
+
+// Log wdg trigger reason, then clear flags
+pub fn check_reset() {
+    if RCC.csr().read().iwdgrstf() {
+        error!(
+            r"Down boy!
+  .
+ ..^____/
+`-. ___ )
+  ||  || mh"
+        );
+    }
+
+    let csr = RCC.csr().read();
+    info!(
+        "Reset flags: pin={}\nbor={}\nstf={}\niwdg={}\nwwdg={}\nlpwr={}",
+        csr.pinrstf(),
+        csr.borrstf(),
+        csr.sftrstf(),
+        csr.iwdgrstf(),
+        csr.wwdgrstf(),
+        csr.lpwrrstf()
+    );
+
+    // Clear reset flags
+    RCC.csr().modify(|w| w.set_rmvf(true));
 }
