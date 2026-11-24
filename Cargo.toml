@@ -5,11 +5,20 @@ edition = "2024"
 rust-version = "1.98.1"
 license = "MIT"
 
+[lib]
+test = false
+bench = false
+
 [[bin]]
 name = "sdm-vcu-firm"
 path = "src/main.rs"
 test = false
 bench = false
+
+[[test]]
+name = "tests"
+path = "tests.rs"
+harness = false
 
 [dependencies]
 embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "defmt"] }
@@ -24,6 +33,9 @@ cortex-m-rt = "0.7.0"
 embedded-can = { version = "0.4" }
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 embassy-sync = "0.8.0"
+
+[dev-dependencies]
+embedded-test = { version = "0.7.3", features = ["embassy-010", "defmt"] }
 
 [profile.release]
 debug = 2

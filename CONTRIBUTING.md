@@ -85,9 +85,16 @@ cargo build --release
 ```
 
 **Flashing**
+
 ```bash
 cargo run            # Debug and internal loopback
 cargo run --relase   # Normal, requires CAN tranceiver
+```
+
+**Testing**
+
+```bash
+cargo test   # Board must be connected
 ```
 
 > #### _Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)_
