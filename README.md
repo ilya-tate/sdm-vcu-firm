@@ -1,10 +1,17 @@
 # SDM EV: _**Vehicle Control Unit Firmware**_
 
+Formula SAE Electric Vehicle VCU firmware. Made for Sun Devil Motorsports EV at Arizona State University.
+
 ### Status
 
 - A custom PCB using the STM32-G4 is currently in development
-- Tested with motor controller, input communication working and decoded
-- Voltage readable via potentiometers
+- CAN 2.0 frame decoding/encoding functional
+- Communication w/ PM100dx motor controller in progress
+- Testing for pedal input, to send torque to motor
+
+### Setup/Development
+
+See [CONTRIBUTING](CONTRIBUTING.md)
 
 ### Documentation
 
@@ -22,13 +29,15 @@
 
 ### Pinout
 
-| Pin  | Header | Peripheral | Function                     |
-| ---- | ------ | ---------- | ---------------------------- |
-| PA0  | A0     | ADC1       | Accelerator pedal position 1 |
-| PA1  | A1     | ADC1       | Accelerator pedal position 2 |
-| PB0  | A3     | ADC1       | Brake pedal position         |
-| PA11 | CN10   | FDCAN1.RX  | CAN transceiver input        |
-| PA12 | CN10   | FDCAN1.TX  | CAN transceiver output       |
+| Pin  | Board Pin  | Peripheral | Connects To                  |
+| ---- | ---------- | ---------- | ---------------------------- |
+| PA0  | CN8-1 (A0) | ADC1       | Accelerator pedal position 1 |
+| PA1  | CN8-2 (A1) | ADC1       | Accelerator pedal position 2 |
+| PB0  | CN8-4 (A3) | ADC1       | Brake pedal position         |
+| PA11 | CN10-14    | FDCAN1.RX  | CAN transceiver Rx           |
+| PA12 | CN10-16    | FDCAN1.TX  | CAN transceiver Tx           |
+|      | CN7-16     |            | CAN transceiver Vcc          |
+|      | CN7-20     |            | CAN transceiver Gnd          |
 
 ### Motor Controller Configuration
 
@@ -40,15 +49,3 @@
 | CAN Timeout                | 0xac    | Nonzero         |
 | CAN Bit Rate               |         | 500 kbps        |
 | CAN ID Offset              |         | 0x0a0 (default) |
-
-### Wiring Directory
-
-| Board Pin | Device          | Location |
-| --------- | --------------- | -------- |
-| CN7-16    | Can transceiver | Vcc      |
-| CN7-20    | Can transceiver | Gnd      |
-| CN10-14   | Can transceiver | Rx       |
-| CN10-16   | Can transceiver | Tx       |
-| CN8-1     | Pedals          | APPS1    |
-| CN8-2     | Pedals          | APPS2    |
-| CN8-4     | Pedals          | Brake    |
