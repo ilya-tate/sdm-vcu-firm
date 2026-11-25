@@ -1,5 +1,20 @@
 # SDM EV: _**Vehicle Control Unit Firmware**_
 
+> [!WARNING]
+> **`bench` branch: pedals are ignored. Do not drive with this firmware.**
+
+### Bench Testing
+
+This branch is only for testing on a bench with the wheels off the ground or the motor disconnected, and an e-stop in reach.
+
+- Motor command is a fixed torque value of 100, no matter the pedal position
+- Starts by itself 5 seconds after the motor controller is ready, until there is a start button
+- Everything else matches `ilya-tate/pedals`
+
+A release build sends this torque over the real CAN bus. A debug build uses CAN loopback, so nothing reaches the motor controller.
+
+Never merge this branch. Copy fixes to a separate branch instead.
+
 ### Status
 
 - A custom PCB using the STM32-G4 is currently in development

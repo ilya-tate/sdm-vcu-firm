@@ -8,14 +8,18 @@ mod pedals;
 
 use crate::can::devices::motor_controller::MotorController;
 
-use core::sync::atomic::Ordering;
-use defmt::{println, trace};
+use defmt::{error, println, trace};
 use embassy_executor::Spawner;
+use embassy_time::{Duration, Instant};
 
 use {defmt_rtt as _, panic_probe as _};
 
+const START_DELAY: Duration = Duration::from_secs(5);
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
+    error!("BENCH BUILD: PEDALS IGNORED, DO NOT DRIVE");
+
     let init::Resources {
         mut wdg,
         can_props,
@@ -23,6 +27,7 @@ async fn main(spawner: Spawner) {
     } = init::setup(spawner);
     let mut tick: u32 = 0;
     let mut log: u32 = 0;
+    let mut ready_at: Option<Instant> = None;
 
     // Super loop
     loop {
@@ -30,19 +35,19 @@ async fn main(spawner: Spawner) {
         ticker.next().await;
 
         // Grab the globals each cycle
-        let torque = pedals::TORQUE.load(Ordering::Relaxed);
-        let apps_is_released = pedals::APPS1.is_released() && pedals::APPS2.is_released();
+        let torque = 100;
         // Constantly read and send torque to motor
         // TODO: Use w/ state machine
         if MotorController.is_ready() {
-            if MotorController.is_enabled() {
-                MotorController.send_torque_cmd(torque);
-            } else if apps_is_released {
-                MotorController.send_start_cmd();
-            } else {
+            if ready_at.get_or_insert_with(Instant::now).elapsed() < START_DELAY {
                 MotorController.send_stop_cmd();
+            } else if MotorController.is_enabled() {
+                MotorController.send_torque_cmd(torque);
+            } else {
+                MotorController.send_start_cmd();
             }
         } else {
+            ready_at = None;
             MotorController.send_stop_cmd();
         }
 
