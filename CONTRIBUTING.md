@@ -88,13 +88,14 @@ cargo build --release
 
 ```bash
 cargo run            # Debug and internal loopback
-cargo run --relase   # Normal, requires CAN tranceiver
+cargo run --release   # Normal, requires CAN transceiver
 ```
 
 **Testing**
 
 ```bash
-cargo test   # Board must be connected
+cargo test                  # Board must be connected
+cargo test -- --no-board    # No board, requires Docker
 ```
 
 > #### _Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)_

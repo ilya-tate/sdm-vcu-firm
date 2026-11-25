@@ -29,5 +29,13 @@ jobs:
         targets: thumbv7em-none-eabihf
     - name: Build
       run: cargo build --release --verbose
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: thumbv7em-none-eabihf
     - name: Test
-      run: cargo test --no-run --verbose
+      run: cargo test -- --no-board
