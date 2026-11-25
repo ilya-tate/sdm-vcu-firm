@@ -1,4 +1,4 @@
-use sdm_vcu_firm::pedals::{APPS1, torque};
+use sdm_vcu_firm::pedals::{APPS1, APPS2, BRAKE, check_brake_fault, torque};
 
 #[embedded_test::tests]
 mod percent {
@@ -31,6 +31,8 @@ mod percent {
         assert_eq!(APPS1.percent(237), Some(1));
         assert_eq!(APPS1.percent(2049), Some(49));
         assert_eq!(APPS1.percent(2050), Some(50));
+        assert_eq!(APPS2.percent(2050), Some(50));
+        assert_eq!(BRAKE.percent(2050), Some(50));
         assert_eq!(APPS1.percent(3899), Some(99));
     }
 
@@ -71,5 +73,37 @@ mod torque {
         for raw in 0..=u16::MAX {
             assert!(APPS1.percent(raw).map_or(0, torque) <= 1000);
         }
+    }
+}
+
+#[embedded_test::tests]
+mod brake_fault {
+    use super::*;
+
+    #[test]
+    fn sets_on_brake_and_throttle() {
+        assert!(check_brake_fault(false, 26, 10));
+    }
+
+    #[test]
+    fn needs_throttle_over_thresh() {
+        assert!(!check_brake_fault(false, 25, 10));
+    }
+
+    #[test]
+    fn needs_brake_at_thresh() {
+        assert!(!check_brake_fault(false, 26, 9));
+    }
+
+    #[test]
+    fn holds_until_throttle_released() {
+        assert!(check_brake_fault(true, 5, 0));
+        assert!(check_brake_fault(true, 30, 0));
+    }
+
+    #[test]
+    fn resets_under_reset_thresh() {
+        assert!(!check_brake_fault(true, 4, 0));
+        assert!(!check_brake_fault(true, 4, 100));
     }
 }

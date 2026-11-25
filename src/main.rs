@@ -8,17 +8,15 @@ mod pedals;
 
 use crate::can::devices::motor_controller::MotorController;
 
+use core::sync::atomic::Ordering;
 use defmt::{println, trace};
 use embassy_executor::Spawner;
-use embassy_stm32::adc::SampleTime;
 
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let init::Resources {
-        mut adc,
-        mut pedal_pin,
         mut wdg,
         can_props,
         mut ticker,
@@ -31,20 +29,29 @@ async fn main(spawner: Spawner) {
         wdg.pet();
         ticker.next().await;
 
-        let adc_input = adc.blocking_read(&mut pedal_pin, SampleTime::CYCLES24_5);
-        let torque = pedals::APPS1.percent(adc_input).map_or(0, pedals::torque);
-
+        // Grab the globals each cycle
+        let torque = pedals::TORQUE.load(Ordering::Relaxed);
+        let apps_is_released = pedals::APPS1.is_released() && pedals::APPS2.is_released();
+        // Constantly read and send torque to motor
+        // TODO: Use w/ state machine
         if MotorController.is_ready() {
-            MotorController.send_torque_cmd(torque);
+            if MotorController.is_enabled() {
+                MotorController.send_torque_cmd(torque);
+            } else if apps_is_released {
+                MotorController.send_start_cmd();
+            } else {
+                MotorController.send_stop_cmd();
+            }
         } else {
             MotorController.send_stop_cmd();
         }
 
         if tick.is_multiple_of(100) {
-            let adc_voltage = adc_input as u32 * 3300 / 4095;
             println!(
-                "Pedal: {} raw, {} mV, {} torque",
-                adc_input, adc_voltage, torque
+                "Torque: {}\nReady: {}\nEnabled: {}",
+                torque,
+                MotorController.is_ready(),
+                MotorController.is_enabled()
             );
         }
 

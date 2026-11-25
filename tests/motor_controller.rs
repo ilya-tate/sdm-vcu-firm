@@ -196,6 +196,13 @@ mod commands {
     use super::*;
 
     #[test]
+    fn sends_stop_when_not_ready() {
+        MotorController.send_torque_cmd(500);
+        check_tx(CMD_ID, STOP);
+        check_tx_empty();
+    }
+
+    #[test]
     fn sends_torque() {
         ready_motor_controller();
         MotorController.send_torque_cmd(500);

@@ -3,8 +3,8 @@
 ### Status
 
 - A custom PCB using the STM32-G4 is currently in development
-- Tested with motor controller, input communication working and decoded
-- Voltage readable via potentiometers
+- CAN communcation w/ motor controller is functional
+- Voltage readable via potentiometers, then sends torque to motor controller
 
 ### Documentation
 

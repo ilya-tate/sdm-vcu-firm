@@ -7,6 +7,7 @@ use embassy_time::{Duration, Timer, block_for};
 use sdm_vcu_firm::can::devices::motor_controller::MotorController;
 use sdm_vcu_firm::can::{self, RX_QUEUE, TX_QUEUE, get_frame_id, queue_msg};
 use sdm_vcu_firm::init;
+use sdm_vcu_firm::pedals::check_apps_plaus;
 
 use crate::can_bus::{
     check_tx, check_tx_empty, fill_tx, gen_extended, gen_frame, gen_remote, start_loopback,
@@ -215,5 +216,57 @@ mod can_loopback {
             can_props.bus_error_mode(),
             BusErrorMode::ErrorActive
         ));
+    }
+}
+
+#[embedded_test::tests]
+mod apps_plaus {
+    use super::*;
+    use sdm_vcu_firm::clocks;
+
+    #[test]
+    fn accepts_matching_sensors() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        assert!(check_apps_plaus(40, 50, &mut fault_at));
+        assert!(fault_at.is_none());
+    }
+
+    #[test]
+    fn starts_timer_on_mismatch() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        assert!(check_apps_plaus(40, 51, &mut fault_at));
+        assert!(fault_at.is_some());
+    }
+
+    #[test]
+    fn allows_mismatch_under_fault_time() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        check_apps_plaus(0, 50, &mut fault_at);
+        block_for(Duration::from_millis(50));
+        assert!(check_apps_plaus(0, 50, &mut fault_at));
+    }
+
+    #[test]
+    fn rejects_mismatch_past_fault_time() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        check_apps_plaus(0, 50, &mut fault_at);
+        block_for(Duration::from_millis(110));
+        assert!(!check_apps_plaus(0, 50, &mut fault_at));
+    }
+
+    #[test]
+    fn recovers_and_resets_timer() {
+        let _peripherals = embassy_stm32::init(clocks::config());
+        let mut fault_at = None;
+        check_apps_plaus(0, 50, &mut fault_at);
+        block_for(Duration::from_millis(110));
+        assert!(!check_apps_plaus(0, 50, &mut fault_at));
+        assert!(check_apps_plaus(50, 50, &mut fault_at));
+        assert!(fault_at.is_none());
+        assert!(check_apps_plaus(0, 50, &mut fault_at));
     }
 }
