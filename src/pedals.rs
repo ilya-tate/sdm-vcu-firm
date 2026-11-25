@@ -1,4 +1,4 @@
-use core::sync::atomic::{AtomicU16, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use embassy_stm32::Peri;
 use embassy_stm32::adc::{Adc, SampleTime};
 use embassy_stm32::peripherals::{ADC1, PA0, PA1, PB0};
@@ -32,29 +32,32 @@ pub struct Resources {
 // TOOO:
 // Calibrate test values for PedalSensor instances
 
-#[derive(Clone, Copy)]
 pub struct PedalSensor {
     min: u16,
     max: u16,
     deadzone: u16,
+    is_released: AtomicBool,
 }
 
-pub const APPS1: PedalSensor = PedalSensor {
+pub static APPS1: PedalSensor = PedalSensor {
     min: 150,
     max: 3900,
     deadzone: 50,
+    is_released: AtomicBool::new(false),
 };
 
-pub const APPS2: PedalSensor = PedalSensor {
+pub static APPS2: PedalSensor = PedalSensor {
     min: 150,
     max: 3900,
     deadzone: 50,
+    is_released: AtomicBool::new(false),
 };
 
-pub const BRAKE: PedalSensor = PedalSensor {
+pub static BRAKE: PedalSensor = PedalSensor {
     min: 150,
     max: 3900,
     deadzone: 50,
+    is_released: AtomicBool::new(false),
 };
 
 impl PedalSensor {
@@ -77,6 +80,10 @@ impl PedalSensor {
 
         // Read whatever input
         Some(((raw - start) as u32 * 100 / (self.max - start) as u32) as u8)
+    }
+
+    pub fn is_released(&self) -> bool {
+        self.is_released.load(Ordering::Relaxed)
     }
 }
 
@@ -123,11 +130,15 @@ pub async fn pedal_processor(mut resources: Resources) -> ! {
             .adc
             .blocking_read(&mut resources.brake, SampleTime::CYCLES24_5);
 
-        let throttle = match (
-            APPS1.percent(apps1_read),
-            APPS2.percent(apps2_read),
-            BRAKE.percent(brake_read),
-        ) {
+        let apps1 = APPS1.percent(apps1_read);
+        let apps2 = APPS2.percent(apps2_read);
+        let brake = BRAKE.percent(brake_read);
+
+        APPS1.is_released.store(apps1 == Some(0), Ordering::Relaxed);
+        APPS2.is_released.store(apps2 == Some(0), Ordering::Relaxed);
+        BRAKE.is_released.store(brake == Some(0), Ordering::Relaxed);
+
+        let throttle = match (apps1, apps2, brake) {
             (Some(apps1), Some(apps2), Some(brake)) => {
                 is_brake_fault = check_brake_fault(is_brake_fault, apps1.max(apps2), brake);
                 let is_apps_plaus = check_apps_plaus(apps1, apps2, &mut prev_apps_fault_at);

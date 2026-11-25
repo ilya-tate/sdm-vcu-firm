@@ -7,6 +7,7 @@ use crate::can::get_frame_id;
 
 static IS_FIRMWARE_PRINTED: AtomicBool = AtomicBool::new(false);
 static IS_LOCKED_OUT: AtomicBool = AtomicBool::new(true);
+static IS_ENABLED: AtomicBool = AtomicBool::new(false);
 static HAS_FAULT: AtomicBool = AtomicBool::new(false);
 
 const CMD_ID: u16 = 0x0c0;
@@ -255,6 +256,7 @@ impl Device for MotorController {
                 };
 
                 IS_LOCKED_OUT.store(enable_flags & 0x80 != 0, Ordering::Relaxed);
+                IS_ENABLED.store(enable_flags & 0x01 != 0, Ordering::Relaxed);
 
                 println!(
                     "VSM state: {}\nInverter state: {}\nInverter enabled: {}\nEnable lockout: {}\nDirection: {}",
@@ -481,5 +483,9 @@ impl MotorController {
 
     pub fn is_ready(&self) -> bool {
         !IS_LOCKED_OUT.load(Ordering::Relaxed) && !HAS_FAULT.load(Ordering::Relaxed)
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        IS_ENABLED.load(Ordering::Relaxed)
     }
 }

@@ -29,12 +29,30 @@ async fn main(spawner: Spawner) {
         wdg.pet();
         ticker.next().await;
 
-        // Constantly read and send torque to motor
+        // Grab the globals each cycle
         let torque = pedals::TORQUE.load(Ordering::Relaxed);
-        MotorController.send_torque_cmd(torque);
+        let apps_is_released = pedals::APPS1.is_released() && pedals::APPS2.is_released();
+        // Constantly read and send torque to motor
+        // TODO: Use w/ state machine
+        if MotorController.is_ready() {
+            if MotorController.is_enabled() {
+                MotorController.send_torque_cmd(torque);
+            } else if apps_is_released {
+                MotorController.send_start_cmd();
+            } else {
+                MotorController.send_stop_cmd();
+            }
+        } else {
+            MotorController.send_stop_cmd();
+        }
 
         if tick.is_multiple_of(100) {
-            println!("Torque: {}", torque);
+            println!(
+                "Torque: {}\nReady: {}\nEnabled: {}",
+                torque,
+                MotorController.is_ready(),
+                MotorController.is_enabled()
+            );
         }
 
         // Error logger matches controller send rate
