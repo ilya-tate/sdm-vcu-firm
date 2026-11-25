@@ -88,7 +88,7 @@ cargo build --release
 
 ```bash
 cargo run            # Debug and internal loopback
-cargo run --relase   # Normal, requires CAN tranceiver
+cargo run --release   # Normal, requires CAN transceiver
 ```
 
 **Testing**
