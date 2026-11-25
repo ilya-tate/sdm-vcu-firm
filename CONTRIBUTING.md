@@ -94,7 +94,8 @@ cargo run --relase   # Normal, requires CAN tranceiver
 **Testing**
 
 ```bash
-cargo test   # Board must be connected
+cargo test                  # Board must be connected
+cargo test -- --no-board    # No board, requires Docker
 ```
 
 > #### _Don't hesitate to DM me (Ilya) on Slack if you run into any issues :)_
