@@ -9,10 +9,6 @@ Formula SAE Electric Vehicle VCU firmware. Made for Sun Devil Motorsports EV at 
 - Communication w/ PM100dx motor controller in progress
 - Testing for pedal input, to send torque to motor
 
-### Setup/Development
-
-See [CONTRIBUTING](CONTRIBUTING.md)
-
 ### Documentation
 
 - Rust: [Embedded Rust Book](https://docs.rust-embedded.org/book)
